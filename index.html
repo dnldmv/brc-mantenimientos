@@ -529,6 +529,27 @@ button.metric[aria-pressed="true"] { background: var(--accent-soft); box-shadow:
   font-weight: 600;
 }
 
+/* Filtros y periodo comparten fila con el punto de venta, sobre el azul del encabezado. */
+.topbar #btnFiltros {
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, .45);
+  padding-block: 8px;
+}
+.topbar #btnFiltros:hover,
+.topbar #btnFiltros[aria-expanded="true"] { background: rgba(255, 255, 255, .15); }
+.topbar .periodoactivo { padding-block: 6px; border-color: rgba(255, 255, 255, .45); }
+.topbar .periodoactivo.todo { color: rgba(255, 255, 255, .8); border-color: rgba(255, 255, 255, .45); }
+.topbar .filtrocount { background: #ffffff; color: var(--marca-azul); }
+.filtrocorto { display: none; }
+/* En el teléfono el botón se acorta para que filtros, periodo y opciones quepan en una fila. */
+@media (max-width: 640px) {
+  .filtrolargo { display: none; }
+  .filtrocorto { display: inline; }
+  .pointrow { column-gap: 8px; }
+  .pointrow .field-pick { flex-basis: 100%; max-width: none; }
+  .topbar .periodoactivo { font-size: .9rem; padding-inline: 10px; }
+}
+
 .viewtoggle { display: flex; border: 1px solid var(--line-strong); border-radius: var(--radius); overflow: hidden; }
 .viewtoggle button { border: 0; border-radius: 0; font-size: .78rem; padding: 7px 12px; background: transparent; }
 .viewtoggle button[aria-pressed="true"] { background: var(--surface-3); font-weight: 600; }
@@ -1280,6 +1301,34 @@ footer .band-inner {
         <label for="selPunto">Punto de venta</label>
         <select id="selPunto"></select>
       </div>
+      <div class="menuwrap filtrowrap">
+        <button class="chip menubtn" id="btnFiltros" aria-expanded="false" aria-haspopup="true" aria-controls="filtrosPanel">
+          <span class="filtrolargo">Elegir filtros y/o periodos</span><span class="filtrocorto">Filtros</span><span class="filtrocount" id="filtroCount" hidden></span> <span class="caret" aria-hidden="true">▾</span>
+        </button>
+        <div class="menupanel filtrospanel" id="filtrosPanel" hidden>
+          <div class="chips" id="chipsEstado"></div>
+          <div class="chips" id="chipsPago"></div>
+          <div class="menusep"></div>
+          <div class="chips" id="rangoMes" hidden>
+            <span class="chiplabel">Periodo</span>
+            <input class="mesinput" type="month" id="mesDesde" placeholder="AAAA-MM" aria-label="Mes">
+            <span id="rangoHasta" hidden>
+              <span class="messep">a</span>
+              <input class="mesinput" type="month" id="mesHasta" placeholder="AAAA-MM" aria-label="Hasta el mes">
+            </span>
+            <button class="chip" type="button" id="mesVarios" aria-pressed="false">Varios meses</button>
+            <button class="chip" type="button" id="mesLimpiar">Todo</button>
+          </div>
+          <div class="menusep"></div>
+          <div class="chips" id="ordenFila">
+            <span class="chiplabel">Ordenar por</span>
+            <select class="mesinput" id="selOrden" aria-label="Ordenar los mantenimientos por"></select>
+          </div>
+          <div class="menusep"></div>
+          <button type="button" id="btnLimpiarChips">Limpiar estado y pago</button>
+        </div>
+      </div>
+      <span class="periodoactivo" id="periodoActivo"></span>
       <div class="menuwrap">
         <button class="ghost-light menubtn" id="btnMenu" aria-expanded="false" aria-haspopup="true" aria-controls="menuPanel">
           Opciones <span class="caret" aria-hidden="true">▾</span>
@@ -1318,34 +1367,6 @@ footer .band-inner {
 
 <section class="controls">
   <div class="band-inner">
-    <div class="menuwrap filtrowrap">
-      <button class="chip menubtn" id="btnFiltros" aria-expanded="false" aria-haspopup="true" aria-controls="filtrosPanel">
-        Elegir filtros y/o periodos<span class="filtrocount" id="filtroCount" hidden></span> <span class="caret" aria-hidden="true">▾</span>
-      </button>
-      <div class="menupanel filtrospanel" id="filtrosPanel" hidden>
-        <div class="chips" id="chipsEstado"></div>
-        <div class="chips" id="chipsPago"></div>
-        <div class="menusep"></div>
-        <div class="chips" id="rangoMes" hidden>
-          <span class="chiplabel">Periodo</span>
-          <input class="mesinput" type="month" id="mesDesde" placeholder="AAAA-MM" aria-label="Mes">
-          <span id="rangoHasta" hidden>
-            <span class="messep">a</span>
-            <input class="mesinput" type="month" id="mesHasta" placeholder="AAAA-MM" aria-label="Hasta el mes">
-          </span>
-          <button class="chip" type="button" id="mesVarios" aria-pressed="false">Varios meses</button>
-          <button class="chip" type="button" id="mesLimpiar">Todo</button>
-        </div>
-        <div class="menusep"></div>
-        <div class="chips" id="ordenFila">
-          <span class="chiplabel">Ordenar por</span>
-          <select class="mesinput" id="selOrden" aria-label="Ordenar los mantenimientos por"></select>
-        </div>
-        <div class="menusep"></div>
-        <button type="button" id="btnLimpiarChips">Limpiar estado y pago</button>
-      </div>
-    </div>
-    <span class="periodoactivo" id="periodoActivo"></span>
     <input id="q" type="search" placeholder="Buscar aquí" aria-label="Buscar descripción, proveedor u observación">
     <div class="viewtoggle" role="group" aria-label="Forma de ver los mantenimientos">
       <button id="vTarjetas" aria-pressed="true">Tarjetas</button>
