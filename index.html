@@ -1312,10 +1312,10 @@ footer .credito { margin: 10px 0 0; font-weight: 600; text-align: right; }
           <div class="menusep"></div>
           <div class="chips" id="rangoMes" hidden>
             <span class="chiplabel">Periodo</span>
-            <input class="mesinput" type="month" id="mesDesde" placeholder="AAAA-MM" aria-label="Mes">
+            <select class="mesinput" id="mesDesde" aria-label="Mes"></select>
             <span id="rangoHasta" hidden>
               <span class="messep">a</span>
-              <input class="mesinput" type="month" id="mesHasta" placeholder="AAAA-MM" aria-label="Hasta el mes">
+              <select class="mesinput" id="mesHasta" aria-label="Hasta el mes"></select>
             </span>
             <button class="chip" type="button" id="mesVarios" aria-pressed="false">Varios meses</button>
             <button class="chip" type="button" id="mesLimpiar">Todo</button>
@@ -2255,6 +2255,28 @@ footer .credito { margin: 10px 0 0; font-weight: 600; text-align: right; }
       el.mesHasta.value = state.mesHasta;
     }
   }
+
+  /* Lista de meses propia, en español: el selector de mes del navegador sale en el
+     idioma del teléfono y se corta en pantallas angostas. Del más reciente al más antiguo. */
+  function llenarMeses(sel) {
+    var hoy = new Date();
+    var opciones = [{ value: "", label: "—" }];
+    for (var y = hoy.getFullYear() + 1; y >= hoy.getFullYear() - 2; y--) {
+      for (var m = 12; m >= 1; m--) {
+        var ym = y + "-" + dosDigitos(m);
+        opciones.push({ value: ym, label: etiquetaMes(ym) });
+      }
+    }
+    sel.textContent = "";
+    opciones.forEach(function (o) {
+      var op = document.createElement("option");
+      op.value = o.value;
+      op.textContent = o.label;
+      sel.appendChild(op);
+    });
+  }
+  llenarMeses(el.mesDesde);
+  llenarMeses(el.mesHasta);
 
   state.mesDesde = mesActual();
   el.mesDesde.value = state.mesDesde;
