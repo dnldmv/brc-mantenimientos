@@ -2120,8 +2120,7 @@ footer .band-inner {
   /* El tablero abre siempre en "Todos los puntos": el punto no se recuerda. */
   el.selPunto.value = state.punto;
 
-  var vistaGuardada = lee("brc.vista");
-  if (vistaGuardada === "tabla" || vistaGuardada === "tarjetas") state.vista = vistaGuardada;
+  /* El tablero abre siempre en fichas: la tabla es para cuando se filtra desde un contador. */
   marcarVista();
 
   function construirChips(cont, titulo, valores, conjunto) {
@@ -2292,7 +2291,6 @@ footer .band-inner {
 
   function setVista(v) {
     state.vista = v;
-    guarda("brc.vista", v);
     marcarVista();
     render();
   }
@@ -2675,6 +2673,8 @@ footer .band-inner {
     b.addEventListener("click", function () {
       state.categoria = null;
       state.confirmar = null;
+      state.vista = "tarjetas";
+      marcarVista();
       render();
       verContenido();
     });
@@ -3203,12 +3203,12 @@ footer .band-inner {
     if (!yaEsta) state.pagos.add(estado);
     sincronizarChipsPago();
     state.confirmar = null;
-    setVista("tabla");
+    setVista(yaEsta ? "tarjetas" : "tabla");
     verContenido();
   }
 
   /* Al tocar un contador de estado: deja solo ese filtro y pasa a la tabla.
-     Tocarlo de nuevo quita el filtro. */
+     Tocarlo de nuevo quita el filtro y vuelve a las fichas. */
   function filtrarPorEstado(estado, categoria) {
     if (categoria) state.categoria = categoria;
     var soloEse = state.estados.size === 1 && state.estados.has(estado);
@@ -3216,7 +3216,7 @@ footer .band-inner {
     if (!soloEse) state.estados.add(estado);
     sincronizarChipsEstado();
     state.confirmar = null;
-    setVista("tabla");
+    setVista(soloEse ? "tarjetas" : "tabla");
     verContenido();
   }
 
@@ -3757,6 +3757,8 @@ footer .band-inner {
     state.perfil = null;
     state.categoria = null;
     state.confirmar = null;
+    state.vista = "tarjetas";
+    marcarVista();
     state.registros = [];
     state.cargado = false;
     if (sb) sb.auth.signOut();
