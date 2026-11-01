@@ -3619,12 +3619,16 @@ footer .band-inner {
   function guardarEstadoCoord(cambio) {
     if (!sb) return sinBase();
     var base = state.estadoCoord || {};
-    sb.from("estado_coordinador").upsert({
+    var fila = {
       id: 1,
       estado: cambio.estado !== undefined ? cambio.estado : (base.estado || ""),
       ubicacion: cambio.ubicacion !== undefined ? cambio.ubicacion : (base.ubicacion || ""),
       actualizado: new Date().toISOString()
-    }).then(function (res) {
+    };
+    /* Se pinta de inmediato: la pantalla no espera a la ida y vuelta. */
+    state.estadoCoord = fila;
+    renderEstadoCoord();
+    sb.from("estado_coordinador").upsert(fila).then(function (res) {
       if (res && res.error) throw res.error;
       toast("Estado del coordinador actualizado.");
       return cargarEstado();
@@ -3928,7 +3932,9 @@ footer .band-inner {
         if (res.error) throw res.error;
         state.estadoCoord = res.data || null;
         renderEstadoCoord();
-      }).catch(function () { /* sin estado: se muestra "sin definir" */ });
+      }).catch(function () {
+        /* Si no se puede leer, se conserva lo que ya estaba en pantalla. */
+      });
   }
 
   /* Cambios de otras personas, en vivo. */
