@@ -1623,6 +1623,7 @@ footer .band-inner {
 
   var sb = null;          // cliente de Supabase
   var canal = null;       // suscripción en vivo a los cambios
+  var canalPortada = null; // suscripción al estado del coordinador en la pantalla de entrada
   var adjInputs = {};
   var adjQuitar = {};
 
@@ -3744,6 +3745,7 @@ footer .band-inner {
     state.puedeEscribir = perfil === "coordinador";
     state.puedeEditar = perfil === "coordinador";
     el.gate.hidden = true;
+    dejarEstadoPortada();
     render();
     cargarDatos();
     cargarEstado();
@@ -3892,6 +3894,8 @@ footer .band-inner {
     c.appendChild(form);
     notaPortada(c);
     renderEstadoCoord();
+    cargarEstado();
+    escucharEstadoPortada();
   }
 
   /* Cambiar la contraseña del perfil con el que estás dentro. */
@@ -4001,6 +4005,18 @@ footer .band-inner {
       .on("postgres_changes", { event: "*", schema: "public", table: "mantenimientos" }, cargarDatos)
       .on("postgres_changes", { event: "*", schema: "public", table: "estado_coordinador" }, cargarEstado)
       .subscribe();
+  }
+
+  /* En la pantalla de entrada solo se escucha el estado del coordinador. */
+  function escucharEstadoPortada() {
+    if (!sb || canalPortada) return;
+    canalPortada = sb.channel("portada")
+      .on("postgres_changes", { event: "*", schema: "public", table: "estado_coordinador" }, cargarEstado)
+      .subscribe();
+  }
+
+  function dejarEstadoPortada() {
+    if (canalPortada && sb) { sb.removeChannel(canalPortada); canalPortada = null; }
   }
 
   /* ---------- arranque ---------- */
