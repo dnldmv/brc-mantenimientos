@@ -155,6 +155,15 @@ body::before {
   border-bottom: 3px solid var(--marca-rojo);
 }
 .topbar .band-inner { padding-block: 12px 14px; }
+/* En el teléfono el encabezado ocupaba un tercio de la pantalla: deja de ser fijo y se compacta. */
+@media (max-width: 640px) {
+  .topbar { position: relative; }
+  .topbar .band-inner { padding-block: 10px 10px; }
+  .topbar .brandlogo { height: 32px; }
+  .topbar .brand-sub { font-size: 1rem; }
+  .pointrow { margin-top: 8px; }
+  #selPunto { font-size: 1.05rem; padding: 6px 10px; }
+}
 
 .brandrow {
   display: flex;
@@ -285,7 +294,11 @@ body::before {
   text-align: center;
   font-variant-numeric: tabular-nums;
 }
-.filtrospanel { left: 0; right: auto; min-width: 356px; max-width: min(94vw, 440px); padding: 8px; gap: 4px; }
+/* Por debajo del encabezado fijo (z-index 20): al bajar la página el panel pasa por detrás, no encima. */
+.filtrospanel { left: 0; right: auto; z-index: 15; min-width: 356px; max-width: min(94vw, 440px); padding: 8px; gap: 4px; }
+@media (max-width: 640px) {
+  .filtrospanel { min-width: 0; width: calc(100vw - 32px); max-width: none; }
+}
 .filtrospanel #rangoMes .chiplabel,
 .filtrospanel #ordenFila .chiplabel { flex: 0 0 100%; margin-bottom: 2px; }
 .filtrospanel #selOrden { flex: 1 1 auto; min-width: 0; }
@@ -904,6 +917,47 @@ th {
 td.num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
 td.desc { min-width: 200px; font-weight: 500; }
 tr:last-child td { border-bottom: 0; }
+
+/* En el teléfono cada fila de la tabla se vuelve una ficha: etiqueta a la izquierda, valor a la derecha. */
+@media (max-width: 640px) {
+  .tablewrap { overflow-x: visible; border: 0; background: transparent; }
+  .tablewrap table, .tablewrap tbody, .tablewrap tr, .tablewrap td { display: block; }
+  .tablewrap table { min-width: 0; }
+  .tablewrap thead { display: none; }
+  .tablewrap tr {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 6px 12px;
+    margin-bottom: 10px;
+  }
+  .tablewrap tr.fingrupo { margin-bottom: 22px; }
+  .tablewrap tr.fingrupo td { border-bottom: 1px solid var(--line); }
+  .tablewrap td {
+    display: grid;
+    grid-template-columns: 96px 1fr;
+    gap: 10px;
+    align-items: start;
+    padding: 6px 0;
+    min-width: 0;
+  }
+  .tablewrap tr td:last-child { border-bottom: 0; }
+  .tablewrap td::before {
+    content: attr(data-label);
+    font-size: .64rem;
+    text-transform: uppercase;
+    letter-spacing: .09em;
+    font-weight: 600;
+    color: var(--fg-muted);
+    padding-top: 2px;
+  }
+  .tablewrap td.desc { display: block; font-size: .95rem; }
+  .tablewrap td.desc::before { content: none; }
+  .tablewrap td.nowrap, .tablewrap td.num { white-space: normal; }
+  .tablewrap .celdarecorte { max-width: none; white-space: normal; }
+  .tablewrap td > * { justify-self: start; min-width: 0; }
+  .tablewrap td .soportes { flex-wrap: wrap; }
+}
 
 /* ---------- Estados de página ---------- */
 .panel {
@@ -3008,6 +3062,9 @@ footer .band-inner {
       ver.addEventListener("click", function () { abrirFicha(r); });
       tdF.appendChild(ver);
       tr.appendChild(tdF);
+
+      /* Etiqueta de cada celda, para la vista de fichas en el teléfono. */
+      Array.prototype.forEach.call(tr.children, function (td, j) { td.setAttribute("data-label", cols[j]); });
 
       tb.appendChild(tr);
     });
