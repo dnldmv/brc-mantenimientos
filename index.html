@@ -34,12 +34,12 @@ img { max-width: 100%; }
   --marca-azul: #07152D;
   --marca-rojo: #D71920;
 
-  --bg: #eef0f4;
-  --surface: #fbfcfd;
-  --surface-2: #e3e7ee;
+  --bg: #f4f6f9;
+  --surface: #ffffff;
+  --surface-2: #e8ecf2;
   --surface-3: #d6dce6;
   --fg: #07152D;
-  --fg-muted: #5a6474;
+  --fg-muted: #434d5d;
   --line: #d2d8e2;
   --line-strong: #b6c0ce;
   --accent: #1a4a8a;
@@ -1269,6 +1269,16 @@ footer .band-inner {
   font-size: .78rem;
 }
 footer .credito { margin: 10px 0 0; font-weight: 600; text-align: right; }
+
+/* En el teléfono las etiquetas pequeñas se agrandan para que se lean sin esfuerzo. */
+@media (max-width: 640px) {
+  .metric-k { font-size: .7rem; }
+  .chiplabel, .estadolab, .field-pick > label, th, .ficha-sub { font-size: .72rem; }
+  .tablewrap td::before { font-size: .7rem; }
+  .badge, .rolepill, .catcard-total span { font-size: .74rem; }
+  .f label { font-size: .76rem; }
+  footer .band-inner { font-size: .82rem; }
+}
 
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; animation: none !important; }
