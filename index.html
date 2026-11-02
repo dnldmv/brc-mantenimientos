@@ -1305,6 +1305,10 @@ body.en-activos .metrics,
 body.en-activos .controls,
 body.en-activos .filtrowrap,
 body.en-activos .periodoactivo,
+body.en-finanzas .metrics,
+body.en-finanzas .controls,
+body.en-finanzas .filtrowrap,
+body.en-finanzas .periodoactivo,
 body.modo-punto .metrics,
 body.modo-punto .controls,
 body.modo-punto .filtrowrap,
@@ -1458,6 +1462,120 @@ button.interv.t-Preventivo { border-left-color: var(--s-comp-fg); }
   .interv .isub { grid-column: 1 / 3; }
 }
 
+/* ---------- Finanzas ---------- */
+/* Series de las gráficas, validadas para daltonismo en claro y en oscuro. */
+:root { --serie-ingreso: #2f62b0; --serie-egreso: #c2630a; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --serie-ingreso: #5a8fd6; --serie-egreso: #c47534; }
+}
+:root[data-theme="dark"] { --serie-ingreso: #5a8fd6; --serie-egreso: #c47534; }
+.finbotones { display: flex; flex-wrap: wrap; gap: 8px; }
+.fincaja {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 12px;
+  margin-bottom: 12px;
+  min-width: 0;
+}
+.fincaja h3 {
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .03em;
+  margin: 0 0 8px;
+}
+.finnota { font-size: .8rem; color: var(--fg-muted); margin: -4px 0 12px; }
+.leyenda { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: .78rem; color: var(--fg-muted); margin-bottom: 10px; }
+.leyenda i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; }
+.mesgraf { display: grid; grid-template-columns: 58px 1fr; gap: 0 6px; }
+.mesejey { position: relative; height: 180px; font-size: .68rem; color: var(--fg-muted); font-family: var(--font-mono); }
+.mesejey span { position: absolute; right: 0; transform: translateY(-50%); white-space: nowrap; }
+.mesarea {
+  position: relative;
+  height: 180px;
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 4px;
+  border-bottom: 1px solid var(--line-strong);
+}
+.mesarea .guia { position: absolute; left: 0; right: 0; border-top: 1px dashed var(--line); pointer-events: none; }
+.mescol { position: relative; display: flex; align-items: flex-end; justify-content: center; gap: 2px; height: 100%; border-radius: 4px; cursor: default; }
+.mescol:hover, .mescol:focus { background: var(--surface-2); outline: none; }
+.mescol .barra { width: 44%; max-width: 18px; border-radius: 4px 4px 0 0; }
+.barra.ing { background: var(--serie-ingreso); }
+.barra.egr { background: var(--serie-egreso); }
+.mesx { grid-column: 2; display: grid; grid-template-columns: repeat(12, 1fr); gap: 4px; font-size: .68rem; color: var(--fg-muted); text-align: center; margin-top: 4px; }
+.fingraf2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 0 12px; }
+.hbars { display: flex; flex-direction: column; gap: 6px; }
+.hbar {
+  display: grid;
+  grid-template-columns: minmax(80px, 36%) 1fr;
+  gap: 10px;
+  align-items: center;
+  font-size: .82rem;
+  border-radius: 4px;
+  padding: 2px 0;
+}
+.hbar:hover, .hbar:focus { background: var(--surface-2); outline: none; }
+.hbar .hnom { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hbar .hpista { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.hbar .barra { height: 12px; border-radius: 0 4px 4px 0; background: var(--serie-egreso); flex: none; }
+.hbar .hval { font-family: var(--font-mono); font-size: .74rem; white-space: nowrap; }
+#tip {
+  position: fixed;
+  z-index: 70;
+  pointer-events: none;
+  background: var(--fg);
+  color: var(--bg);
+  font-size: .78rem;
+  line-height: 1.35;
+  padding: 7px 10px;
+  border-radius: 6px;
+  max-width: 240px;
+  box-shadow: var(--shadow);
+}
+#tip b { display: block; margin-bottom: 2px; }
+.fincaja details { margin-top: 10px; font-size: .8rem; }
+.fincaja summary { cursor: pointer; color: var(--accent); }
+table.fintabla { min-width: 0; width: 100%; margin-top: 8px; font-size: .8rem; }
+table.fintabla td, table.fintabla th { padding: 5px 8px; }
+table.fintabla td.num, table.fintabla th.num { text-align: right; }
+.movhead { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+.movhead h3 { margin: 0; }
+.movs { display: flex; flex-direction: column; gap: 6px; }
+.mov {
+  display: grid;
+  grid-template-columns: 92px 1fr auto;
+  gap: 2px 10px;
+  align-items: start;
+  font-size: .84rem;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--line-strong);
+  border-radius: var(--radius);
+  padding: 8px 10px;
+}
+.mov.t-Ingreso { border-left-color: var(--serie-ingreso); }
+.mov.t-Egreso { border-left-color: var(--serie-egreso); }
+.mov .mfecha { font-family: var(--font-mono); font-size: .78rem; color: var(--fg-muted); }
+.mov .mter { font-weight: 600; min-width: 0; overflow-wrap: anywhere; }
+.mov .mval { font-family: var(--font-mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.mov .msub { grid-column: 2 / 4; font-size: .76rem; color: var(--fg-muted); overflow-wrap: anywhere; }
+.mov .macc { grid-column: 2 / 4; display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
+.pendrow { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 10px; padding: 7px 0; border-top: 1px dashed var(--line); font-size: .82rem; }
+.pendrow span { min-width: 0; overflow-wrap: anywhere; }
+.fintipo { display: flex; margin-bottom: 14px; }
+.fintipo button { flex: 1; }
+@media (max-width: 640px) {
+  .secctoggle { display: grid; grid-template-columns: 1fr 1fr; }
+  .mesgraf { grid-template-columns: 44px 1fr; }
+  .mesarea, .mesx { gap: 2px; }
+  .mov { grid-template-columns: 1fr auto; }
+  .mov .mfecha, .mov .msub, .mov .macc { grid-column: 1 / 3; }
+}
+
 /* En el teléfono las etiquetas pequeñas se agrandan para que se lean sin esfuerzo. */
 @media (max-width: 640px) {
   .metric-k { font-size: .7rem; }
@@ -1563,6 +1681,7 @@ button.interv.t-Preventivo { border-left-color: var(--s-comp-fg); }
       <button type="button" id="tabMant" aria-pressed="true">Mantenimientos</button>
       <button type="button" id="tabSol" aria-pressed="false">Solicitudes <span class="solcount" id="solCount" hidden></span></button>
       <button type="button" id="tabAct" aria-pressed="false">Activos</button>
+      <button type="button" id="tabFin" aria-pressed="false">Finanzas</button>
     </div>
   </div>
 </nav>
@@ -1699,6 +1818,73 @@ button.interv.t-Preventivo { border-left-color: var(--s-comp-fg); }
     <div class="visorcuerpo" id="visorCuerpo"></div>
   </div>
 </div>
+
+<div class="overlay" id="finOverlay" hidden>
+  <form class="sheet" id="finForm" novalidate>
+    <h2 id="finTitulo">Registrar movimiento</h2>
+    <div class="viewtoggle fintipo" role="group" aria-label="Tipo de movimiento">
+      <button type="button" id="finTipoIng" aria-pressed="false">Dinero recibido</button>
+      <button type="button" id="finTipoEgr" aria-pressed="true">Dinero ejecutado</button>
+    </div>
+    <div class="formgrid">
+      <div class="f wide" id="mMantWrap">
+        <label for="mMant">Mantenimiento que se paga (opcional)</label>
+        <select id="mMant"></select>
+        <span class="hint">Al elegirlo se llenan el contratista, el valor, el punto y el concepto.</span>
+      </div>
+      <div class="f">
+        <label for="mFecha">Fecha</label>
+        <input id="mFecha" type="date">
+      </div>
+      <div class="f">
+        <label for="mValor">Valor (COP)</label>
+        <input id="mValor" type="number" min="1" step="1" inputmode="numeric" placeholder="0">
+      </div>
+      <div class="f wide">
+        <label for="mTercero" id="mTerceroLabel">Contratista</label>
+        <input id="mTercero" list="dlTerceros" maxlength="160" autocomplete="off">
+        <datalist id="dlTerceros"></datalist>
+      </div>
+      <div class="f wide">
+        <label for="mConcepto">Concepto</label>
+        <input id="mConcepto" maxlength="500" autocomplete="off" placeholder="Ej. Pago cuenta de cobro 601, limpieza de campanas">
+      </div>
+      <div class="f">
+        <label for="mPunto">Punto de venta</label>
+        <select id="mPunto"></select>
+      </div>
+      <div class="f">
+        <label for="mCategoria">Categoría</label>
+        <select id="mCategoria"></select>
+      </div>
+      <div class="f">
+        <label for="mMedio">Medio</label>
+        <select id="mMedio"></select>
+      </div>
+      <div class="f">
+        <label for="mRef">Referencia</label>
+        <input id="mRef" maxlength="120" autocomplete="off" placeholder="Factura, cuenta de cobro o comprobante">
+      </div>
+      <div class="f wide">
+        <label for="mSoporte">Soporte (PDF o foto)</label>
+        <input type="file" id="mSoporte" accept="application/pdf,image/*">
+        <span class="hint" id="mSoporteHint">Opcional.</span>
+      </div>
+      <div class="f wide">
+        <label for="mNotas">Notas</label>
+        <textarea id="mNotas" maxlength="2000"></textarea>
+      </div>
+    </div>
+    <div class="formerror" id="finError" hidden></div>
+    <div class="sheet-actions">
+      <button type="button" class="danger" id="finEliminar" hidden>Eliminar</button>
+      <button type="button" id="finCancelar">Cancelar</button>
+      <button type="submit" class="primary" id="finGuardar">Guardar</button>
+    </div>
+  </form>
+</div>
+
+<div id="tip" hidden></div>
 
 <div class="overlay" id="actOverlay" hidden>
   <form class="sheet" id="actForm" novalidate>
@@ -2074,7 +2260,13 @@ button.interv.t-Preventivo { border-left-color: var(--s-comp-fg); }
     actCargados: false,
     actQ: "",
     actCat: "",
-    hojaId: null
+    hojaId: null,
+    movimientos: [],
+    finCargados: false,
+    finAnio: String(new Date().getFullYear()),
+    finMes: "",
+    finTipo: "",
+    finQ: ""
   };
 
   var sb = null;          // cliente de Supabase
@@ -2173,6 +2365,34 @@ button.interv.t-Preventivo { border-left-color: var(--s-comp-fg); }
       activo: document.getElementById("pActivo")
     },
     tabAct: document.getElementById("tabAct"),
+    tabFin: document.getElementById("tabFin"),
+    finOverlay: document.getElementById("finOverlay"),
+    finForm: document.getElementById("finForm"),
+    finTitulo: document.getElementById("finTitulo"),
+    finTipoIng: document.getElementById("finTipoIng"),
+    finTipoEgr: document.getElementById("finTipoEgr"),
+    finError: document.getElementById("finError"),
+    finEliminar: document.getElementById("finEliminar"),
+    finCancelar: document.getElementById("finCancelar"),
+    finGuardar: document.getElementById("finGuardar"),
+    tip: document.getElementById("tip"),
+    dlTerceros: document.getElementById("dlTerceros"),
+    mMantWrap: document.getElementById("mMantWrap"),
+    mTerceroLabel: document.getElementById("mTerceroLabel"),
+    m: {
+      mant: document.getElementById("mMant"),
+      fecha: document.getElementById("mFecha"),
+      valor: document.getElementById("mValor"),
+      tercero: document.getElementById("mTercero"),
+      concepto: document.getElementById("mConcepto"),
+      punto: document.getElementById("mPunto"),
+      categoria: document.getElementById("mCategoria"),
+      medio: document.getElementById("mMedio"),
+      ref: document.getElementById("mRef"),
+      soporte: document.getElementById("mSoporte"),
+      soporteHint: document.getElementById("mSoporteHint"),
+      notas: document.getElementById("mNotas")
+    },
     actOverlay: document.getElementById("actOverlay"),
     actForm: document.getElementById("actForm"),
     actTitulo: document.getElementById("actTitulo"),
@@ -3116,6 +3336,10 @@ button.interv.t-Preventivo { border-left-color: var(--s-comp-fg); }
       el.content.appendChild(vistaActivos());
       return;
     }
+    if (state.seccion === "finanzas") {
+      el.content.appendChild(vistaFinanzas());
+      return;
+    }
 
     if (!state.cargado && !state.error) {
       el.content.appendChild(panel(
@@ -3838,6 +4062,7 @@ button.interv.t-Preventivo { border-left-color: var(--s-comp-fg); }
   document.addEventListener("keydown", function (ev) {
     if (ev.key !== "Escape") return;
     if (!el.visorOverlay.hidden) { cerrarVisor(); return; }
+    if (!el.finOverlay.hidden) { cerrarMovimiento(); return; }
     if (!el.actOverlay.hidden) { cerrarActivo(); return; }
     if (!el.progOverlay.hidden) { cerrarProgramar(); return; }
     if (!el.solOverlay.hidden) { cerrarSolicitud(); return; }
@@ -4340,6 +4565,7 @@ button.interv.t-Preventivo { border-left-color: var(--s-comp-fg); }
     if (perfil !== "punto") {
       cargarDatos();
       cargarActivos();
+      cargarMovimientos();
     }
     cargarEstado();
     cargarSolicitudes();
@@ -4365,6 +4591,9 @@ button.interv.t-Preventivo { border-left-color: var(--s-comp-fg); }
     state.solCargadas = false;
     state.activos = [];
     state.actCargados = false;
+    state.movimientos = [];
+    state.finCargados = false;
+    el.finOverlay.hidden = true;
     state.hojaId = null;
     el.hojaOverlay.hidden = true;
     state.uid = null;
@@ -4623,8 +4852,10 @@ button.interv.t-Preventivo { border-left-color: var(--s-comp-fg); }
     el.tabMant.setAttribute("aria-pressed", state.seccion === "mantenimientos" ? "true" : "false");
     el.tabSol.setAttribute("aria-pressed", state.seccion === "solicitudes" ? "true" : "false");
     el.tabAct.setAttribute("aria-pressed", state.seccion === "activos" ? "true" : "false");
+    el.tabFin.setAttribute("aria-pressed", state.seccion === "finanzas" ? "true" : "false");
     document.body.classList.toggle("en-solicitudes", state.seccion === "solicitudes");
     document.body.classList.toggle("en-activos", state.seccion === "activos");
+    document.body.classList.toggle("en-finanzas", state.seccion === "finanzas");
     document.body.classList.toggle("modo-punto", state.perfil === "punto");
     document.title = (state.perfil === "coordinador" && nuevas ? "(" + nuevas + ") " : "") + TITULO;
   }
@@ -4638,6 +4869,7 @@ button.interv.t-Preventivo { border-left-color: var(--s-comp-fg); }
   el.tabMant.addEventListener("click", function () { irASeccion("mantenimientos"); });
   el.tabSol.addEventListener("click", function () { irASeccion("solicitudes"); });
   el.tabAct.addEventListener("click", function () { irASeccion("activos"); });
+  el.tabFin.addEventListener("click", function () { irASeccion("finanzas"); });
 
   /* Las nuevas primero; luego de la más reciente a la más antigua. */
   function solicitudesVisibles() {
@@ -5855,6 +6087,723 @@ button.interv.t-Preventivo { border-left-color: var(--s-comp-fg); }
     }).catch(fallo);
   });
 
+  /* ---------- finanzas: dineros recibidos y ejecutados ---------- */
+
+  var MEDIOS = ["Transferencia", "Efectivo", "Cheque", "Otro"];
+  var MESES_CORTOS = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
+
+  fillSelect(el.m.punto, PUNTOS.map(function (p) { return { value: p.id, label: p.nombre }; }), "General, sin punto");
+  fillSelect(el.m.categoria, CATEGORIAS.map(function (c) { return { value: c.id, label: c.corto }; }), "Sin categoría");
+  fillSelect(el.m.medio, MEDIOS.map(function (m) { return { value: m, label: m }; }));
+
+  function cargarMovimientos() {
+    if (!sb) return Promise.resolve();
+    return sb.from("movimientos").select("*").order("fecha", { ascending: false }).then(function (res) {
+      if (res.error) throw res.error;
+      state.movimientos = res.data || [];
+      state.finCargados = true;
+      render();
+    }).catch(function () {
+      state.finCargados = true;
+      render();
+    });
+  }
+
+  function enPeriodo(f) {
+    if (!f) return false;
+    if (state.finAnio && String(f).slice(0, 4) !== state.finAnio) return false;
+    if (state.finMes && String(f).slice(5, 7) !== state.finMes) return false;
+    return true;
+  }
+
+  function enPunto(x) { return state.punto === "todos" || x.punto === state.punto; }
+
+  function suma(lista, tipo) {
+    return lista.reduce(function (t, m) { return m.tipo === tipo ? t + Number(m.valor) : t; }, 0);
+  }
+
+  /* Montos cortos para ejes: $1,5 M, $800 mil. */
+  function copCorto(n) {
+    if (n >= 1e6) return "$" + (n / 1e6).toLocaleString("es-CO", { maximumFractionDigits: 1 }) + " M";
+    if (n >= 1e3) return "$" + Math.round(n / 1e3) + " mil";
+    return "$" + Math.round(n);
+  }
+
+  /* Tope redondo del eje: 1, 2, 2,5 o 5 por potencia de diez. */
+  function topeEje(v) {
+    if (v <= 0) return 1;
+    var p = Math.pow(10, Math.floor(Math.log10(v)));
+    var n = v / p;
+    return (n <= 1 ? 1 : n <= 2 ? 2 : n <= 2.5 ? 2.5 : n <= 5 ? 5 : 10) * p;
+  }
+
+  /* ---------- información al pasar el cursor ---------- */
+
+  function mostrarTip(nodo, titulo, lineas) {
+    var t = el.tip;
+    t.textContent = "";
+    var b = document.createElement("b");
+    b.textContent = titulo;
+    t.appendChild(b);
+    lineas.forEach(function (l) {
+      var d = document.createElement("div");
+      d.textContent = l;
+      t.appendChild(d);
+    });
+    t.hidden = false;
+    var r = nodo.getBoundingClientRect();
+    var x = Math.min(window.innerWidth - t.offsetWidth - 8, Math.max(8, r.left + r.width / 2 - t.offsetWidth / 2));
+    var y = r.top - t.offsetHeight - 8;
+    if (y < 8) y = r.bottom + 8;
+    t.style.left = x + "px";
+    t.style.top = y + "px";
+  }
+
+  function ocultarTip() { el.tip.hidden = true; }
+
+  function conTip(nodo, titulo, lineas) {
+    nodo.tabIndex = 0;
+    nodo.setAttribute("aria-label", titulo + ": " + lineas.join(", "));
+    function ver() { mostrarTip(nodo, titulo, lineas); }
+    nodo.addEventListener("mouseenter", ver);
+    nodo.addEventListener("focus", ver);
+    nodo.addEventListener("click", ver);
+    nodo.addEventListener("mouseleave", ocultarTip);
+    nodo.addEventListener("blur", ocultarTip);
+  }
+
+  window.addEventListener("scroll", ocultarTip, { passive: true });
+
+  /* ---------- vista ---------- */
+
+  function anios() {
+    var vistos = {};
+    vistos[String(new Date().getFullYear())] = true;
+    state.movimientos.forEach(function (m) { if (m.fecha) vistos[String(m.fecha).slice(0, 4)] = true; });
+    return Object.keys(vistos).sort().reverse();
+  }
+
+  function filtrosFinanzas() {
+    var box = document.createElement("div");
+    box.className = "actfiltros";
+    var a = document.createElement("select");
+    a.setAttribute("aria-label", "Año");
+    fillSelect(a, anios().map(function (x) { return { value: x, label: x }; }));
+    a.value = state.finAnio;
+    a.addEventListener("change", function () { state.finAnio = a.value; render(); });
+    box.appendChild(a);
+    var m = document.createElement("select");
+    m.setAttribute("aria-label", "Mes");
+    fillSelect(m, MESES.map(function (n, i) { return { value: dosDigitos(i + 1), label: n.charAt(0).toUpperCase() + n.slice(1) }; }), "Todo el año");
+    m.value = state.finMes;
+    m.addEventListener("change", function () { state.finMes = m.value; render(); });
+    box.appendChild(m);
+    return box;
+  }
+
+  function vistaFinanzas() {
+    var wrap = document.createElement("section");
+    wrap.className = "cat";
+
+    var head = document.createElement("div");
+    head.className = "solhead";
+    var h = document.createElement("h2");
+    h.textContent = "Finanzas";
+    head.appendChild(h);
+    if (state.perfil === "coordinador") {
+      var bot = document.createElement("div");
+      bot.className = "finbotones";
+      bot.appendChild(botonChico("Registrar dinero recibido", "", function () { abrirMovimiento(null, "Ingreso"); }));
+      bot.appendChild(botonChico("Registrar dinero ejecutado", "primary", function () { abrirMovimiento(null, "Egreso"); }));
+      head.appendChild(bot);
+    }
+    wrap.appendChild(head);
+
+    if (!state.finCargados) {
+      wrap.appendChild(panel("Cargando finanzas", ["Estamos trayendo los movimientos registrados."], []));
+      return wrap;
+    }
+
+    wrap.appendChild(filtrosFinanzas());
+
+    var periodo = state.movimientos.filter(function (m) { return enPeriodo(m.fecha) && enPunto(m); });
+    var recibido = suma(periodo, "Ingreso");
+    var ejecutado = suma(periodo, "Egreso");
+    var todos = state.movimientos.filter(enPunto);
+    var saldo = suma(todos, "Ingreso") - suma(todos, "Egreso");
+    var egresos = periodo.filter(function (m) { return m.tipo === "Egreso"; });
+    var contratistas = {};
+    egresos.forEach(function (m) { contratistas[m.tercero.trim().toLowerCase()] = true; });
+
+    var nombrePeriodo = (state.finMes ? MESES[Number(state.finMes) - 1] + " de " : "") + state.finAnio;
+    var hero = document.createElement("div");
+    hero.className = "actresumen";
+    hero.appendChild(cajaDato("Recibido · " + nombrePeriodo, cop(recibido)));
+    hero.appendChild(cajaDato("Ejecutado · " + nombrePeriodo, cop(ejecutado)));
+    hero.appendChild(cajaDato("Diferencia del periodo", cop(recibido - ejecutado), recibido - ejecutado < 0 ? "alerta" : ""));
+    hero.appendChild(cajaDato("Saldo disponible (todo el histórico)", cop(saldo), saldo < 0 ? "alerta" : ""));
+    hero.appendChild(cajaDato("Pagos · contratistas", egresos.length + " · " + Object.keys(contratistas).length));
+    wrap.appendChild(hero);
+
+    if (state.punto !== "todos") {
+      var nota = document.createElement("p");
+      nota.className = "finnota";
+      nota.textContent = "Filtrado por " + nombrePunto(state.punto) +
+        ": los movimientos generales, sin punto, solo se cuentan con \"Todos los puntos\".";
+      wrap.appendChild(nota);
+    }
+
+    if (state.perfil === "coordinador") {
+      var pend = bloquePendientes();
+      if (pend) wrap.appendChild(pend);
+    }
+
+    var delAnio = state.movimientos.filter(function (m) {
+      return String(m.fecha).slice(0, 4) === state.finAnio && enPunto(m);
+    });
+    wrap.appendChild(graficoMensual(delAnio));
+
+    var g2 = document.createElement("div");
+    g2.className = "fingraf2";
+    g2.appendChild(barrasH("Ejecutado por contratista", agrupar(egresos, function (m) { return m.tercero.trim(); })));
+    g2.appendChild(barrasH("Ejecutado por punto", agrupar(egresos, function (m) { return m.punto ? nombrePunto(m.punto) : "General"; })));
+    g2.appendChild(barrasH("Ejecutado por categoría", agrupar(egresos, function (m) { return m.categoria ? categoriaCorta(m.categoria) : "Sin categoría"; })));
+    wrap.appendChild(g2);
+
+    wrap.appendChild(listaMovimientos(periodo));
+    return wrap;
+  }
+
+  /* Mantenimientos marcados como pagados que todavía no tienen su egreso aquí. */
+  function bloquePendientes() {
+    var pagados = {};
+    state.movimientos.forEach(function (m) { if (m.mantenimiento_id) pagados[m.mantenimiento_id] = true; });
+    var lista = state.registros.filter(function (r) {
+      return r.estadoPago === "Pagado" && numero(r.costoReal) !== null && !pagados[r.id] && enPunto(r);
+    }).sort(function (a, b) { return String(fechaInterv(b)).localeCompare(String(fechaInterv(a))); });
+    if (!lista.length) return null;
+
+    var caja = document.createElement("div");
+    caja.className = "fincaja";
+    var h = document.createElement("h3");
+    h.textContent = "Pagos por registrar (" + lista.length + ")";
+    caja.appendChild(h);
+    var p = document.createElement("p");
+    p.className = "finnota";
+    p.style.margin = "0 0 6px";
+    p.textContent = "Mantenimientos marcados como pagados que aún no tienen su egreso registrado en finanzas.";
+    caja.appendChild(p);
+    lista.slice(0, 5).forEach(function (r) {
+      var fila = document.createElement("div");
+      fila.className = "pendrow";
+      var t = document.createElement("span");
+      t.textContent = fecha(fechaInterv(r)) + " · " + nombrePunto(r.punto) + " · " +
+        (r.responsable || "Sin contratista") + " · " + cop(r.costoReal);
+      fila.appendChild(t);
+      fila.appendChild(botonChico("Registrar pago", "primary", function () { abrirMovimiento(null, "Egreso", r.id); }));
+      caja.appendChild(fila);
+    });
+    if (lista.length > 5) {
+      var mas = document.createElement("p");
+      mas.className = "finnota";
+      mas.style.margin = "8px 0 0";
+      mas.textContent = "Y " + (lista.length - 5) + " más.";
+      caja.appendChild(mas);
+    }
+    return caja;
+  }
+
+  function graficoMensual(lista) {
+    var ing = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+    var egr = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+    lista.forEach(function (m) {
+      var i = Number(String(m.fecha).slice(5, 7)) - 1;
+      if (i < 0 || i > 11) return;
+      if (m.tipo === "Ingreso") ing[i] += Number(m.valor);
+      else egr[i] += Number(m.valor);
+    });
+    var tope = topeEje(Math.max.apply(null, ing.concat(egr)));
+
+    var caja = document.createElement("div");
+    caja.className = "fincaja";
+    var h = document.createElement("h3");
+    h.textContent = "Recibido vs. ejecutado por mes · " + state.finAnio;
+    caja.appendChild(h);
+
+    var ley = document.createElement("div");
+    ley.className = "leyenda";
+    [["Recibido", "var(--serie-ingreso)"], ["Ejecutado", "var(--serie-egreso)"]].forEach(function (x) {
+      var s = document.createElement("span");
+      var i = document.createElement("i");
+      i.style.background = x[1];
+      s.appendChild(i);
+      s.appendChild(document.createTextNode(x[0]));
+      ley.appendChild(s);
+    });
+    caja.appendChild(ley);
+
+    var graf = document.createElement("div");
+    graf.className = "mesgraf";
+    var ejeY = document.createElement("div");
+    ejeY.className = "mesejey";
+    ejeY.setAttribute("aria-hidden", "true");
+    var area = document.createElement("div");
+    area.className = "mesarea";
+    [1, 0.5].forEach(function (k) {
+      var lab = document.createElement("span");
+      lab.style.top = ((1 - k) * 100) + "%";
+      lab.textContent = copCorto(tope * k);
+      ejeY.appendChild(lab);
+      var g = document.createElement("div");
+      g.className = "guia";
+      g.style.top = ((1 - k) * 100) + "%";
+      area.appendChild(g);
+    });
+    var cero = document.createElement("span");
+    cero.style.top = "100%";
+    cero.textContent = "$0";
+    ejeY.appendChild(cero);
+
+    for (var i = 0; i < 12; i++) {
+      var col = document.createElement("div");
+      col.className = "mescol";
+      [[ing[i], "ing"], [egr[i], "egr"]].forEach(function (x) {
+        var b = document.createElement("div");
+        b.className = "barra " + x[1];
+        b.style.height = (x[0] > 0 ? Math.max(1, x[0] / tope * 100) : 0) + "%";
+        col.appendChild(b);
+      });
+      conTip(col, MESES[i].charAt(0).toUpperCase() + MESES[i].slice(1) + " " + state.finAnio,
+        ["Recibido: " + cop(ing[i]), "Ejecutado: " + cop(egr[i]), "Diferencia: " + cop(ing[i] - egr[i])]);
+      area.appendChild(col);
+    }
+    graf.appendChild(ejeY);
+    graf.appendChild(area);
+    var ejeX = document.createElement("div");
+    ejeX.className = "mesx";
+    ejeX.setAttribute("aria-hidden", "true");
+    MESES_CORTOS.forEach(function (m) {
+      var s = document.createElement("span");
+      s.textContent = m;
+      ejeX.appendChild(s);
+    });
+    graf.appendChild(ejeX);
+    caja.appendChild(graf);
+
+    /* La misma información en tabla, para leerla sin la gráfica. */
+    var det = document.createElement("details");
+    var sum = document.createElement("summary");
+    sum.textContent = "Ver como tabla";
+    det.appendChild(sum);
+    var t = document.createElement("table");
+    t.className = "fintabla";
+    var tr = document.createElement("tr");
+    ["Mes", "Recibido", "Ejecutado", "Diferencia"].forEach(function (c, j) {
+      var th = document.createElement("th");
+      th.textContent = c;
+      if (j) th.className = "num";
+      tr.appendChild(th);
+    });
+    t.appendChild(tr);
+    for (var k = 0; k < 12; k++) {
+      var fila = document.createElement("tr");
+      [MESES[k], cop(ing[k]), cop(egr[k]), cop(ing[k] - egr[k])].forEach(function (v, j) {
+        var td = document.createElement("td");
+        td.textContent = v;
+        if (j) td.className = "num";
+        fila.appendChild(td);
+      });
+      t.appendChild(fila);
+    }
+    det.appendChild(t);
+    caja.appendChild(det);
+    return caja;
+  }
+
+  function agrupar(lista, clave) {
+    var mapa = {};
+    lista.forEach(function (m) {
+      var k = clave(m) || "—";
+      var id = k.toLowerCase();
+      if (!mapa[id]) mapa[id] = { nombre: k, total: 0, n: 0 };
+      mapa[id].total += Number(m.valor);
+      mapa[id].n++;
+    });
+    return Object.keys(mapa).map(function (k) { return mapa[k]; })
+      .sort(function (a, b) { return b.total - a.total; });
+  }
+
+  /* Ranking en barras horizontales; desde el noveno se suman en "Otros". */
+  function barrasH(titulo, grupos) {
+    var caja = document.createElement("div");
+    caja.className = "fincaja";
+    var h = document.createElement("h3");
+    h.textContent = titulo;
+    caja.appendChild(h);
+    if (!grupos.length) {
+      var v = document.createElement("p");
+      v.className = "cat-empty";
+      v.style.padding = "0";
+      v.textContent = "Sin dinero ejecutado en este periodo.";
+      caja.appendChild(v);
+      return caja;
+    }
+    var total = grupos.reduce(function (t, g) { return t + g.total; }, 0);
+    var lista = grupos.slice(0, 8);
+    if (grupos.length > 8) {
+      var resto = grupos.slice(8);
+      lista.push({
+        nombre: "Otros (" + resto.length + ")",
+        total: resto.reduce(function (t, g) { return t + g.total; }, 0),
+        n: resto.reduce(function (t, g) { return t + g.n; }, 0)
+      });
+    }
+    var max = Math.max.apply(null, lista.map(function (g) { return g.total; }));
+    var box = document.createElement("div");
+    box.className = "hbars";
+    lista.forEach(function (g) {
+      var fila = document.createElement("div");
+      fila.className = "hbar";
+      var n = document.createElement("span");
+      n.className = "hnom";
+      n.textContent = g.nombre;
+      var pista = document.createElement("div");
+      pista.className = "hpista";
+      var b = document.createElement("div");
+      b.className = "barra";
+      b.style.width = "calc((100% - 96px) * " + (g.total / max).toFixed(4) + ")";
+      var val = document.createElement("span");
+      val.className = "hval";
+      var pct = Math.round(g.total / total * 100);
+      val.textContent = copCorto(g.total) + " · " + pct + "%";
+      pista.appendChild(b);
+      pista.appendChild(val);
+      fila.appendChild(n);
+      fila.appendChild(pista);
+      conTip(fila, g.nombre, [cop(g.total), g.n + (g.n === 1 ? " pago" : " pagos"), pct + "% de lo ejecutado"]);
+      box.appendChild(fila);
+    });
+    caja.appendChild(box);
+    return caja;
+  }
+
+  function listaMovimientos(periodo) {
+    var caja = document.createElement("div");
+    caja.className = "fincaja";
+
+    var q = state.finQ.trim().toLowerCase();
+    var lista = periodo.filter(function (m) {
+      if (state.finTipo && m.tipo !== state.finTipo) return false;
+      if (!q) return true;
+      return [m.tercero, m.concepto, m.referencia, m.notas].join(" ").toLowerCase().indexOf(q) !== -1;
+    }).sort(function (a, b) {
+      return String(b.fecha).localeCompare(String(a.fecha)) || String(b.creado).localeCompare(String(a.creado));
+    });
+
+    var head = document.createElement("div");
+    head.className = "movhead";
+    var h = document.createElement("h3");
+    h.textContent = "Movimientos (" + lista.length + ")";
+    head.appendChild(h);
+    if (lista.length) head.appendChild(botonChico("Descargar CSV", "", function () { csvMovimientos(lista); }));
+    caja.appendChild(head);
+
+    var filtros = document.createElement("div");
+    filtros.className = "actfiltros";
+    var tipos = document.createElement("div");
+    tipos.className = "viewtoggle";
+    tipos.setAttribute("role", "group");
+    tipos.setAttribute("aria-label", "Tipo de movimiento");
+    [["", "Todos"], ["Ingreso", "Recibido"], ["Egreso", "Ejecutado"]].forEach(function (x) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.textContent = x[1];
+      b.setAttribute("aria-pressed", state.finTipo === x[0] ? "true" : "false");
+      b.addEventListener("click", function () { state.finTipo = x[0]; render(); });
+      tipos.appendChild(b);
+    });
+    filtros.appendChild(tipos);
+    var buscar = document.createElement("input");
+    buscar.type = "search";
+    buscar.placeholder = "Buscar contratista o concepto";
+    buscar.setAttribute("aria-label", "Buscar por contratista, concepto o referencia");
+    buscar.value = state.finQ;
+    buscar.addEventListener("input", function () {
+      var pos = buscar.selectionStart;
+      state.finQ = buscar.value;
+      render();
+      var otro = el.content.querySelector(".movbuscar");
+      if (otro) {
+        otro.focus();
+        try { otro.setSelectionRange(pos, pos); } catch (e) { /* sin posición */ }
+      }
+    });
+    buscar.className = "movbuscar";
+    filtros.appendChild(buscar);
+    caja.appendChild(filtros);
+
+    if (!lista.length) {
+      var v = document.createElement("p");
+      v.className = "cat-empty";
+      v.textContent = state.movimientos.length
+        ? "No hay movimientos con este filtro."
+        : "Todavía no hay movimientos." +
+          (state.perfil === "coordinador" ? " Registra el dinero recibido y los pagos a contratistas con los botones de arriba." : "");
+      caja.appendChild(v);
+      return caja;
+    }
+
+    var movs = document.createElement("div");
+    movs.className = "movs";
+    lista.forEach(function (m) {
+      var fila = document.createElement("article");
+      fila.className = "mov t-" + m.tipo;
+      var f = document.createElement("span");
+      f.className = "mfecha";
+      f.textContent = fecha(m.fecha);
+      var t = document.createElement("span");
+      t.className = "mter";
+      t.textContent = m.tercero;
+      var v = document.createElement("span");
+      v.className = "mval";
+      v.textContent = (m.tipo === "Ingreso" ? "+ " : "− ") + cop(m.valor);
+      var sub = document.createElement("span");
+      sub.className = "msub";
+      sub.textContent = [m.tipo === "Ingreso" ? "Recibido" : "Ejecutado", m.concepto,
+        m.punto ? nombrePunto(m.punto) : "General", m.categoria ? categoriaCorta(m.categoria) : "",
+        m.medio, m.referencia].filter(Boolean).join(" · ");
+      fila.appendChild(f);
+      fila.appendChild(t);
+      fila.appendChild(v);
+      fila.appendChild(sub);
+      var acc = document.createElement("div");
+      acc.className = "macc";
+      if (m.soporte && m.soporte.archivo) acc.appendChild(botonChico("Ver soporte", "", function () { verSoporte(m.soporte); }));
+      if (m.mantenimiento_id) {
+        acc.appendChild(botonChico("Ver mantenimiento", "", function () { verMantenimiento(m.mantenimiento_id); }));
+      }
+      if (state.perfil === "coordinador") acc.appendChild(botonChico("Editar", "", function () { abrirMovimiento(m); }));
+      if (acc.children.length) fila.appendChild(acc);
+      movs.appendChild(fila);
+    });
+    caja.appendChild(movs);
+    return caja;
+  }
+
+  function csvMovimientos(lista) {
+    function esc(v) {
+      var s = String(v === null || v === undefined ? "" : v);
+      return /[";\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+    }
+    var lineas = [["Fecha", "Tipo", "Tercero", "Concepto", "Punto", "Categoria", "Medio", "Referencia", "Valor"].join(";")];
+    lista.forEach(function (m) {
+      lineas.push([m.fecha, m.tipo === "Ingreso" ? "Recibido" : "Ejecutado", m.tercero, m.concepto,
+        m.punto ? nombrePunto(m.punto) : "General", m.categoria ? nombreCategoria(m.categoria) : "",
+        m.medio, m.referencia, m.valor].map(esc).join(";"));
+    });
+    bajarTexto("finanzas-brc-" + state.finAnio + (state.finMes ? "-" + state.finMes : "") + ".csv",
+      "\ufeff" + lineas.join("\r\n"), "text/csv;charset=utf-8");
+  }
+
+  /* ---------- formulario de movimiento ---------- */
+
+  var finEditando = null;
+  var finTipoForm = "Egreso";
+
+  function ponerTipo(t) {
+    finTipoForm = t;
+    var egreso = t === "Egreso";
+    el.finTipoIng.setAttribute("aria-pressed", egreso ? "false" : "true");
+    el.finTipoEgr.setAttribute("aria-pressed", egreso ? "true" : "false");
+    el.mTerceroLabel.textContent = egreso ? "Contratista" : "Quién entrega el dinero";
+    el.m.tercero.placeholder = egreso ? "Ej. Ecomanser S.A.S." : "Ej. Administración Buffalo Ribs";
+    el.mMantWrap.hidden = !egreso;
+    el.finTitulo.textContent = (finEditando ? "Editar " : "Registrar ") + (egreso ? "dinero ejecutado" : "dinero recibido");
+  }
+
+  el.finTipoIng.addEventListener("click", function () { ponerTipo("Ingreso"); });
+  el.finTipoEgr.addEventListener("click", function () { ponerTipo("Egreso"); });
+
+  /* Sugerencias de contratista: los ya usados aquí y los responsables de los mantenimientos. */
+  function llenarTerceros() {
+    var vistos = {};
+    state.movimientos.forEach(function (m) { if (m.tercero) vistos[m.tercero.trim()] = true; });
+    state.registros.forEach(function (r) { if (r.responsable) vistos[r.responsable.trim()] = true; });
+    el.dlTerceros.textContent = "";
+    Object.keys(vistos).sort().forEach(function (n) {
+      var o = document.createElement("option");
+      o.value = n;
+      el.dlTerceros.appendChild(o);
+    });
+  }
+
+  function llenarMantPago(valor) {
+    var pagados = {};
+    state.movimientos.forEach(function (m) { if (m.mantenimiento_id) pagados[m.mantenimiento_id] = true; });
+    var lista = state.registros.filter(function (r) {
+      return r.id === valor || numero(r.costoReal) !== null || numero(r.costoEstimado) !== null;
+    }).sort(function (a, b) { return String(fechaInterv(b)).localeCompare(String(fechaInterv(a))); });
+    fillSelect(el.m.mant, lista.map(function (r) {
+      var monto = numero(r.costoReal) !== null ? r.costoReal : r.costoEstimado;
+      return {
+        value: r.id,
+        label: fecha(fechaInterv(r)) + " · " + nombrePunto(r.punto) + " · " +
+          String(r.descripcion || "").slice(0, 50) + " · " + cop(monto) + (pagados[r.id] && r.id !== valor ? " (ya tiene pago)" : "")
+      };
+    }), "Ninguno");
+    el.m.mant.value = valor || "";
+  }
+
+  el.m.mant.addEventListener("change", function () {
+    var r = null;
+    for (var i = 0; i < state.registros.length; i++) if (state.registros[i].id === el.m.mant.value) r = state.registros[i];
+    if (!r) return;
+    var monto = numero(r.costoReal) !== null ? numero(r.costoReal) : numero(r.costoEstimado);
+    if (r.responsable) el.m.tercero.value = r.responsable;
+    if (monto !== null) el.m.valor.value = monto;
+    el.m.concepto.value = ("Pago: " + (r.descripcion || "")).slice(0, 500);
+    el.m.punto.value = r.punto || "";
+    el.m.categoria.value = r.categoria || "";
+  });
+
+  function abrirMovimiento(m, tipo, mantId) {
+    var x = el.m;
+    finEditando = m ? m.id : null;
+    x.fecha.value = m ? m.fecha : hoyIso();
+    x.valor.value = m ? numero(m.valor) : "";
+    x.tercero.value = m ? m.tercero : "";
+    x.concepto.value = m ? m.concepto : "";
+    x.punto.value = m ? (m.punto || "") : (state.punto !== "todos" ? state.punto : "");
+    x.categoria.value = m ? (m.categoria || "") : "";
+    x.medio.value = m ? m.medio : "Transferencia";
+    x.ref.value = m ? m.referencia : "";
+    x.notas.value = m ? m.notas : "";
+    x.soporte.value = "";
+    x.soporteHint.textContent = m && m.soporte
+      ? "Ya tiene soporte: si eliges otro, lo reemplaza."
+      : "Opcional. PDF, JPG, PNG o WebP, hasta 20 MB.";
+    llenarTerceros();
+    llenarMantPago(m ? m.mantenimiento_id : "");
+    ponerTipo(m ? m.tipo : (tipo || "Egreso"));
+    if (mantId) {
+      x.mant.value = mantId;
+      x.mant.dispatchEvent(new Event("change"));
+    }
+    el.finEliminar.hidden = !m;
+    el.finError.hidden = true;
+    el.finOverlay.hidden = false;
+    setTimeout(function () { (x.valor.value ? x.fecha : x.valor).focus(); }, 30);
+  }
+
+  function cerrarMovimiento() {
+    el.finOverlay.hidden = true;
+    finEditando = null;
+  }
+
+  el.finCancelar.addEventListener("click", cerrarMovimiento);
+  el.finOverlay.addEventListener("click", function (ev) {
+    if (ev.target === el.finOverlay) cerrarMovimiento();
+  });
+
+  function errorMovimiento(texto) {
+    el.finError.textContent = texto;
+    el.finError.hidden = false;
+  }
+
+  function restaurarMovimiento() {
+    el.finGuardar.disabled = false;
+    el.finGuardar.textContent = "Guardar";
+  }
+
+  /* Los PDF se suben tal cual; las fotos, reducidas. */
+  function subirSoporteFinanzas(archivo, tipoMov, fechaMov) {
+    var esPdf = (archivo.type || tipoPorNombre(archivo.name)) === "application/pdf";
+    var preparar = esPdf ? Promise.resolve(archivo) : reducirFoto(archivo);
+    return preparar.then(function (blob) {
+      var tipo = esPdf ? "application/pdf" : (blob.type || archivo.type || "");
+      if (["application/pdf", "image/jpeg", "image/png", "image/webp"].indexOf(tipo) === -1) throw { codigo: "tipo" };
+      if (blob.size > 20 * 1024 * 1024) throw { codigo: "grande" };
+      var ext = tipo === "application/pdf" ? ".pdf" : (tipo === "image/png" ? ".png" : (tipo === "image/webp" ? ".webp" : ".jpg"));
+      var nombre = rutaSegura(String(archivo.name || "soporte").replace(/\.[^.]+$/, "")) + ext;
+      var ruta = tipoMov.toLowerCase() + "/" + String(fechaMov).slice(0, 4) + "/" + Date.now() + "-" + nombre;
+      return sb.storage.from("finanzas").upload(ruta, blob, { contentType: tipo, upsert: false }).then(function (res) {
+        if (res.error) throw res.error;
+        return { archivo: ruta, nombre: archivo.name || nombre, tipo: tipo, bucket: "finanzas" };
+      });
+    });
+  }
+
+  el.finForm.addEventListener("submit", function (ev) {
+    ev.preventDefault();
+    var x = el.m;
+    var valor = x.valor.value === "" ? null : Number(x.valor.value);
+    var faltan = [];
+    if (!x.fecha.value) faltan.push("la fecha");
+    if (!(valor > 0)) faltan.push("el valor");
+    if (!x.tercero.value.trim()) faltan.push(finTipoForm === "Egreso" ? "el contratista" : "quién entrega el dinero");
+    if (!x.concepto.value.trim()) faltan.push("el concepto");
+    if (faltan.length) return errorMovimiento("Falta " + faltan.join(", ") + ".");
+    if (!sb) return sinBase();
+
+    var previo = null;
+    state.movimientos.forEach(function (m) { if (m.id === finEditando) previo = m; });
+    var fila = {
+      tipo: finTipoForm,
+      fecha: x.fecha.value,
+      valor: valor,
+      tercero: x.tercero.value.trim(),
+      concepto: x.concepto.value.trim(),
+      punto: x.punto.value || null,
+      categoria: x.categoria.value || null,
+      medio: x.medio.value,
+      referencia: x.ref.value.trim(),
+      mantenimiento_id: finTipoForm === "Egreso" ? (x.mant.value || null) : null,
+      notas: x.notas.value.trim()
+    };
+
+    el.finGuardar.disabled = true;
+    el.finGuardar.textContent = "Guardando…";
+    el.finError.hidden = true;
+
+    var archivo = x.soporte.files && x.soporte.files[0];
+    var subida = archivo
+      ? subirSoporteFinanzas(archivo, fila.tipo, fila.fecha).then(function (s) { fila.soporte = s; })
+      : Promise.resolve();
+    var id = finEditando;
+    subida.then(function () {
+      return id ? sb.from("movimientos").update(fila).eq("id", id) : sb.from("movimientos").insert(fila);
+    }).then(function (res) {
+      if (res && res.error) throw res.error;
+      if (fila.soporte && previo && previo.soporte && previo.soporte.archivo) {
+        sb.storage.from("finanzas").remove([previo.soporte.archivo]);
+      }
+      restaurarMovimiento();
+      cerrarMovimiento();
+      toast(id ? "Movimiento actualizado." : (fila.tipo === "Egreso" ? "Pago registrado." : "Ingreso registrado."));
+      return cargarMovimientos();
+    }).catch(function (e) {
+      restaurarMovimiento();
+      errorMovimiento(e && e.codigo === "tipo"
+        ? "El soporte debe ser PDF, JPG, PNG o WebP."
+        : (e && e.codigo === "grande" ? "El soporte pasa de 20 MB. Súbelo comprimido."
+          : "No se pudo guardar el movimiento. Intenta de nuevo."));
+    });
+  });
+
+  el.finEliminar.addEventListener("click", function () {
+    var m = null;
+    state.movimientos.forEach(function (x) { if (x.id === finEditando) m = x; });
+    if (!m || !sb) return;
+    if (!window.confirm("¿Eliminar este movimiento de " + cop(m.valor) + " (" + m.tercero + ")? No se puede deshacer.")) return;
+    sb.from("movimientos").delete().eq("id", m.id).then(function (res) {
+      if (res.error) throw res.error;
+      if (m.soporte && m.soporte.archivo) sb.storage.from("finanzas").remove([m.soporte.archivo]);
+      cerrarMovimiento();
+      toast("Movimiento eliminado.");
+      return cargarMovimientos();
+    }).catch(fallo);
+  });
+
   /* ---------- datos ---------- */
 
   function cargarDatos() {
@@ -5891,6 +6840,7 @@ button.interv.t-Preventivo { border-left-color: var(--s-comp-fg); }
       .on("postgres_changes", { event: "*", schema: "public", table: "mantenimientos" }, cargarDatos)
       .on("postgres_changes", { event: "*", schema: "public", table: "solicitudes" }, cambioSolicitud)
       .on("postgres_changes", { event: "*", schema: "public", table: "activos" }, cargarActivos)
+      .on("postgres_changes", { event: "*", schema: "public", table: "movimientos" }, cargarMovimientos)
       .on("postgres_changes", { event: "*", schema: "public", table: "estado_coordinador" }, cargarEstado)
       .subscribe();
   }
