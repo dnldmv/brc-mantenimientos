@@ -1280,6 +1280,89 @@ footer .band-inner {
 }
 footer .credito { margin: 10px 0 0; font-weight: 600; text-align: right; }
 
+/* ---------- Solicitudes de los puntos ---------- */
+.secciones { background: var(--surface); border-bottom: 1px solid var(--line); }
+.secciones .band-inner { padding-block: 8px; }
+.secctoggle { display: inline-flex; }
+.secctoggle button { font-size: .88rem; padding: 8px 16px; display: inline-flex; align-items: center; gap: 6px; }
+.solcount {
+  display: inline-block;
+  min-width: 19px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--marca-rojo);
+  color: #ffffff;
+  font-size: .72rem;
+  font-weight: 700;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+body.en-solicitudes .metrics,
+body.en-solicitudes .controls,
+body.en-solicitudes .filtrowrap,
+body.en-solicitudes .periodoactivo,
+body.modo-punto .metrics,
+body.modo-punto .controls,
+body.modo-punto .filtrowrap,
+body.modo-punto .periodoactivo,
+body.modo-punto .field-pick,
+body.modo-punto #btnCsv { display: none !important; }
+.solhead { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin: 14px 0 8px; }
+.solhead h2 {
+  font-family: var(--font-display);
+  font-size: 1.3rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .03em;
+  margin: 0;
+}
+.solguia { font-size: .86rem; color: var(--fg-muted); margin: 0 0 12px; max-width: 70ch; }
+.solfiltros { display: inline-flex; margin-bottom: 10px; }
+.solavisos {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  font-size: .82rem;
+  color: var(--fg-muted);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius);
+  padding: 9px 12px;
+  margin-bottom: 12px;
+}
+.solresp { font-size: .85rem; margin: 0; padding: 8px 10px; background: var(--surface-2); border-radius: var(--radius); overflow-wrap: break-word; }
+.progresumen { font-size: .86rem; color: var(--fg-muted); margin: -4px 0 12px; overflow-wrap: break-word; }
+.f label.checkline { display: flex; align-items: center; gap: 8px; font-size: .9rem; text-transform: none; letter-spacing: 0; color: var(--fg); font-weight: 500; }
+.f label.checkline input { width: auto; }
+.fotosprev { display: flex; flex-wrap: wrap; gap: 6px; }
+.fotochip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: .78rem;
+  background: var(--surface-2);
+  border-radius: 999px;
+  padding: 3px 4px 3px 10px;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+.gateform select {
+  font-family: var(--font-body);
+  font-size: .95rem;
+  padding: 10px 12px;
+  background: var(--surface);
+  color: var(--fg);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  width: 100%;
+}
+@media (max-width: 640px) {
+  .secctoggle { display: flex; width: 100%; }
+  .secctoggle button { flex: 1; justify-content: center; }
+}
+
 /* En el teléfono las etiquetas pequeñas se agrandan para que se lean sin esfuerzo. */
 @media (max-width: 640px) {
   .metric-k { font-size: .7rem; }
@@ -1378,6 +1461,15 @@ footer .credito { margin: 10px 0 0; font-weight: 600; text-align: right; }
     </div>
   </div>
 </header>
+
+<nav class="secciones" id="secciones" hidden>
+  <div class="band-inner">
+    <div class="viewtoggle secctoggle" role="group" aria-label="Sección del tablero">
+      <button type="button" id="tabMant" aria-pressed="true">Mantenimientos</button>
+      <button type="button" id="tabSol" aria-pressed="false">Solicitudes <span class="solcount" id="solCount" hidden></span></button>
+    </div>
+  </div>
+</nav>
 
 <section class="estadobar">
   <div class="band-inner" id="estadoBarInner"></div>
@@ -1508,6 +1600,86 @@ footer .credito { margin: 10px 0 0; font-weight: 600; text-align: right; }
   </div>
 </div>
 
+<div class="overlay" id="solOverlay" hidden>
+  <form class="sheet" id="solForm" novalidate>
+    <h2>Nueva solicitud</h2>
+    <div class="formgrid">
+      <div class="f" id="solPuntoWrap">
+        <label for="sPunto">Punto de venta</label>
+        <select id="sPunto"></select>
+      </div>
+      <div class="f">
+        <label for="sReporta">¿Quién reporta?</label>
+        <input id="sReporta" autocomplete="name" maxlength="120" placeholder="Nombre y cargo">
+      </div>
+      <div class="f">
+        <label for="sCategoria">¿De qué se trata?</label>
+        <select id="sCategoria"></select>
+      </div>
+      <div class="f">
+        <label for="sUrgencia">Urgencia</label>
+        <select id="sUrgencia"></select>
+      </div>
+      <div class="f wide">
+        <label for="sDescripcion">Describe el problema</label>
+        <textarea id="sDescripcion" maxlength="2000" placeholder="Qué pasa, dónde y desde cuándo. Ej.: la nevera de bebidas no enfría desde anoche."></textarea>
+      </div>
+      <div class="f wide">
+        <label class="checkline"><input type="checkbox" id="sAfecta"> Impide operar normalmente</label>
+      </div>
+      <div class="f wide">
+        <label for="sFotos">Fotos (hasta 3)</label>
+        <input type="file" id="sFotos" accept="image/*" multiple>
+        <div class="fotosprev" id="sFotosPrev"></div>
+        <span class="hint">Opcional. Se reducen antes de enviarse para que suban rápido.</span>
+      </div>
+    </div>
+    <div class="formerror" id="solError" hidden></div>
+    <div class="sheet-actions">
+      <button type="button" id="solCancelar">Cancelar</button>
+      <button type="submit" class="primary" id="solEnviar">Enviar solicitud</button>
+    </div>
+  </form>
+</div>
+
+<div class="overlay" id="progOverlay" hidden>
+  <form class="sheet" id="progForm" novalidate>
+    <h2 id="progTitulo">Programar solicitud</h2>
+    <p class="progresumen" id="progResumen"></p>
+    <div class="formgrid">
+      <div class="f soloprog">
+        <label for="pCategoria">Categoría</label>
+        <select id="pCategoria"></select>
+      </div>
+      <div class="f soloprog">
+        <label for="pPrioridad">Prioridad</label>
+        <select id="pPrioridad"></select>
+      </div>
+      <div class="f soloprog">
+        <label for="pFecha">Fecha programada</label>
+        <input id="pFecha" type="date">
+      </div>
+      <div class="f soloprog">
+        <label for="pResponsable">Responsable o proveedor</label>
+        <input id="pResponsable" autocomplete="off" placeholder="Ej. Refricosta S.A.S.">
+      </div>
+      <div class="f soloprog">
+        <label for="pCosto">Costo estimado (COP)</label>
+        <input id="pCosto" type="number" min="0" step="1000" inputmode="numeric" placeholder="0">
+      </div>
+      <div class="f wide">
+        <label for="pRespuesta" id="pRespuestaLabel">Mensaje para el punto (opcional)</label>
+        <textarea id="pRespuesta" maxlength="2000" placeholder="Ej.: El técnico pasa el jueves en la mañana."></textarea>
+      </div>
+    </div>
+    <div class="formerror" id="progError" hidden></div>
+    <div class="sheet-actions">
+      <button type="button" id="progCancelar">Cancelar</button>
+      <button type="submit" class="primary" id="progGuardar">Programar</button>
+    </div>
+  </form>
+</div>
+
 <div id="toast" hidden></div>
 
 <script src="vendor/supabase.js"></script>
@@ -1626,6 +1798,23 @@ footer .credito { margin: 10px 0 0; font-weight: 600; text-align: right; }
     "Completado": "st-Completado"
   };
 
+  /* Solicitudes que los puntos envían cuando algo se daña. */
+  var ESTADOS_SOL = ["Nueva", "Programada", "En curso", "Resuelta", "Rechazada"];
+  var SOL_ABIERTAS = ["Nueva", "Programada", "En curso"];
+  var SOL_CLASS = {
+    "Nueva": "st-Pendiente",
+    "Programada": "st-Programado",
+    "En curso": "st-EnCurso",
+    "Resuelta": "st-Completado",
+    "Rechazada": "neutral"
+  };
+  var URGENCIAS = [
+    { value: "Alta", label: "Alta: hay que atender hoy" },
+    { value: "Media", label: "Media: en los próximos días" },
+    { value: "Baja", label: "Baja: cuando se pueda" }
+  ];
+  var TITULO = document.title;
+
   var money = new Intl.NumberFormat("es-CO", {
     style: "currency", currency: "COP", maximumFractionDigits: 0
   });
@@ -1641,6 +1830,11 @@ footer .credito { margin: 10px 0 0; font-weight: 600; text-align: right; }
       nombre: "Coordinador",
       detalle: "Registra, edita y cierra mantenimientos, adjunta soportes y marca pagos.",
       correo: (window.CONFIG || {}).correoCoordinador
+    },
+    punto: {
+      nombre: "Punto de venta",
+      detalle: "Reporta daños o arreglos imprevistos de tu punto y sigue cuándo se atienden.",
+      correo: null
     }
   };
 
@@ -1664,7 +1858,13 @@ footer .credito { margin: 10px 0 0; font-weight: 600; text-align: right; }
     editando: null,
     confirmar: null,
     puedeEditar: null,
-    estadoCoord: null
+    estadoCoord: null,
+    seccion: "mantenimientos",
+    miPunto: null,
+    solicitudes: [],
+    solCargadas: false,
+    solFiltro: "abiertas",
+    uid: null
   };
 
   var sb = null;          // cliente de Supabase
@@ -1725,6 +1925,42 @@ footer .credito { margin: 10px 0 0; font-weight: 600; text-align: right; }
     btnGuardar: document.getElementById("btnGuardar"),
     dlTareas: document.getElementById("dlTareas"),
     toast: document.getElementById("toast"),
+    secciones: document.getElementById("secciones"),
+    tabMant: document.getElementById("tabMant"),
+    tabSol: document.getElementById("tabSol"),
+    solCount: document.getElementById("solCount"),
+    solOverlay: document.getElementById("solOverlay"),
+    solForm: document.getElementById("solForm"),
+    solPuntoWrap: document.getElementById("solPuntoWrap"),
+    solError: document.getElementById("solError"),
+    solCancelar: document.getElementById("solCancelar"),
+    solEnviar: document.getElementById("solEnviar"),
+    progOverlay: document.getElementById("progOverlay"),
+    progForm: document.getElementById("progForm"),
+    progTitulo: document.getElementById("progTitulo"),
+    progResumen: document.getElementById("progResumen"),
+    progError: document.getElementById("progError"),
+    progCancelar: document.getElementById("progCancelar"),
+    progGuardar: document.getElementById("progGuardar"),
+    s: {
+      punto: document.getElementById("sPunto"),
+      reporta: document.getElementById("sReporta"),
+      categoria: document.getElementById("sCategoria"),
+      urgencia: document.getElementById("sUrgencia"),
+      descripcion: document.getElementById("sDescripcion"),
+      afecta: document.getElementById("sAfecta"),
+      fotos: document.getElementById("sFotos"),
+      fotosPrev: document.getElementById("sFotosPrev")
+    },
+    p: {
+      categoria: document.getElementById("pCategoria"),
+      prioridad: document.getElementById("pPrioridad"),
+      fecha: document.getElementById("pFecha"),
+      responsable: document.getElementById("pResponsable"),
+      costo: document.getElementById("pCosto"),
+      respuesta: document.getElementById("pRespuesta"),
+      respuestaLabel: document.getElementById("pRespuestaLabel")
+    },
     f: {
       punto: document.getElementById("fPunto"),
       categoria: document.getElementById("fCategoria"),
@@ -2018,7 +2254,7 @@ footer .credito { margin: 10px 0 0; font-weight: 600; text-align: right; }
 
   /* Trae el archivo del almacenamiento y lo entrega al navegador. */
   function bajarBlob(sop) {
-    return sb.storage.from("soportes").download(sop.archivo).then(function (res) {
+    return sb.storage.from(sop.bucket || "soportes").download(sop.archivo).then(function (res) {
       if (res.error) throw res.error;
       return res.data;
     });
@@ -2465,6 +2701,7 @@ footer .credito { margin: 10px 0 0; font-weight: 600; text-align: right; }
 
   function render() {
     marcarRol();
+    marcarSolicitudes();
     renderEstadoCoord();
     renderMetrics();
     renderStatus();
@@ -2621,6 +2858,11 @@ footer .credito { margin: 10px 0 0; font-weight: 600; text-align: right; }
 
   function renderContent() {
     el.content.textContent = "";
+
+    if (state.seccion === "solicitudes") {
+      el.content.appendChild(vistaSolicitudes());
+      return;
+    }
 
     if (!state.cargado && !state.error) {
       el.content.appendChild(panel(
@@ -3341,6 +3583,8 @@ footer .credito { margin: 10px 0 0; font-weight: 600; text-align: right; }
   document.addEventListener("keydown", function (ev) {
     if (ev.key !== "Escape") return;
     if (!el.visorOverlay.hidden) { cerrarVisor(); return; }
+    if (!el.progOverlay.hidden) { cerrarProgramar(); return; }
+    if (!el.solOverlay.hidden) { cerrarSolicitud(); return; }
     if (!el.filtrosPanel.hidden) { abrirFiltros(false); return; }
     if (!el.menuPanel.hidden) { abrirMenu(false); return; }
     if (!el.fichaOverlay.hidden) { cerrarFicha(); return; }
@@ -3630,6 +3874,12 @@ footer .credito { margin: 10px 0 0; font-weight: 600; text-align: right; }
       el.btnClaves.hidden = true;
       return;
     }
+    if (state.perfil === "punto") {
+      el.rolepill.textContent = nombrePunto(state.miPunto) + " · Punto de venta";
+      el.rolepill.hidden = false;
+      el.btnClaves.hidden = true;
+      return;
+    }
     el.rolepill.textContent = state.perfil === "consulta"
       ? "Gerencia · solo consulta"
       : (soloLectura() ? "Coordinador · solo consulta" : "Coordinador");
@@ -3805,18 +4055,30 @@ footer .credito { margin: 10px 0 0; font-weight: 600; text-align: right; }
   }
 
   function perfilDeRol(rol) {
-    return rol === "coordinador" ? "coordinador" : "consulta";
+    if (rol === "coordinador") return "coordinador";
+    if (rol === "punto") return "punto";
+    return "consulta";
   }
 
-  function abrirApp(perfil) {
+  function abrirApp(perfil, punto) {
     state.perfil = perfil;
+    state.miPunto = perfil === "punto" ? punto : null;
     state.puedeEscribir = perfil === "coordinador";
     state.puedeEditar = perfil === "coordinador";
+    if (perfil === "punto") {
+      /* El punto solo trabaja con sus solicitudes. */
+      state.seccion = "solicitudes";
+      state.punto = punto;
+    }
     el.gate.hidden = true;
     dejarEstadoPortada();
+    sb.auth.getSession().then(function (res) {
+      state.uid = res.data && res.data.session ? res.data.session.user.id : null;
+    });
     render();
-    cargarDatos();
+    if (perfil !== "punto") cargarDatos();
     cargarEstado();
+    cargarSolicitudes();
     escucharCambios();
   }
 
@@ -3831,6 +4093,14 @@ footer .credito { margin: 10px 0 0; font-weight: 600; text-align: right; }
     state.cargado = false;
     if (sb) sb.auth.signOut();
     el.gate.hidden = false;
+    state.seccion = "mantenimientos";
+    state.miPunto = null;
+    state.punto = "todos";
+    el.selPunto.value = "todos";
+    state.solicitudes = [];
+    state.solCargadas = false;
+    state.uid = null;
+    marcarSolicitudes();
     marcarRol();
     portadaIngreso();
     window.scrollTo({ top: 0 });
@@ -3838,9 +4108,9 @@ footer .credito { margin: 10px 0 0; font-weight: 600; text-align: right; }
 
   /* Pregunta al servidor qué rol tiene la sesión abierta. */
   function rolDeSesion() {
-    return sb.from("perfiles").select("rol").maybeSingle().then(function (res) {
+    return sb.from("perfiles").select("rol, punto").maybeSingle().then(function (res) {
       if (res.error) throw res.error;
-      return res.data ? res.data.rol : null;
+      return res.data || null;
     });
   }
 
@@ -3853,7 +4123,7 @@ footer .credito { margin: 10px 0 0; font-weight: 600; text-align: right; }
           sb.auth.signOut();
           return portadaIngreso("Esta cuenta no tiene un perfil asignado en el tablero.");
         }
-        abrirApp(perfilDeRol(rol));
+        abrirApp(perfilDeRol(rol.rol), rol.punto);
       });
     }).catch(function () {
       portadaIngreso("No se pudo contactar con el servidor. Revisa la conexión y recarga.");
@@ -3872,7 +4142,7 @@ footer .credito { margin: 10px 0 0; font-weight: 600; text-align: right; }
     cont.className = "perfiles";
     var elegido = null;
     var botones = {};
-    var clave, err;
+    var clave, err, puntoWrap, selIngreso;
 
     Object.keys(PERFILES).forEach(function (k) {
       var b = document.createElement("button");
@@ -3891,7 +4161,9 @@ footer .credito { margin: 10px 0 0; font-weight: 600; text-align: right; }
           botones[x].setAttribute("aria-pressed", x === k ? "true" : "false");
         });
         if (err) err.hidden = true;
-        if (clave) clave.input.focus();
+        if (puntoWrap) puntoWrap.hidden = k !== "punto";
+        if (k === "punto" && selIngreso && !selIngreso.value) selIngreso.focus();
+        else if (clave) clave.input.focus();
       });
       botones[k] = b;
       cont.appendChild(b);
@@ -3900,6 +4172,21 @@ footer .credito { margin: 10px 0 0; font-weight: 600; text-align: right; }
 
     var form = document.createElement("form");
     form.className = "gateform";
+    /* El perfil de punto de venta pide además cuál punto. */
+    puntoWrap = document.createElement("div");
+    puntoWrap.className = "f";
+    puntoWrap.hidden = true;
+    var lp = document.createElement("label");
+    lp.setAttribute("for", "gPunto");
+    lp.textContent = "Tu punto de venta";
+    selIngreso = document.createElement("select");
+    selIngreso.id = "gPunto";
+    fillSelect(selIngreso, PUNTOS.map(function (p) { return { value: p.id, label: p.nombre }; }), "Elige el punto");
+    selIngreso.value = lee("brc.puntoIngreso") || "";
+    puntoWrap.appendChild(lp);
+    puntoWrap.appendChild(selIngreso);
+    form.appendChild(puntoWrap);
+
     clave = campoClave("Contraseña", "gClave");
     form.appendChild(clave.wrap);
 
@@ -3922,6 +4209,11 @@ footer .credito { margin: 10px 0 0; font-weight: 600; text-align: right; }
         err.hidden = false;
         return;
       }
+      if (elegido === "punto" && !selIngreso.value) {
+        err.textContent = "Elige tu punto de venta.";
+        err.hidden = false;
+        return;
+      }
       if (!clave.input.value) {
         err.textContent = "Escribe la contraseña.";
         err.hidden = false;
@@ -3930,9 +4222,10 @@ footer .credito { margin: 10px 0 0; font-weight: 600; text-align: right; }
       err.hidden = true;
       entrar.disabled = true;
       entrar.textContent = "Entrando…";
+      if (elegido === "punto") guarda("brc.puntoIngreso", selIngreso.value);
 
       sb.auth.signInWithPassword({
-        email: PERFILES[elegido].correo,
+        email: elegido === "punto" ? correoPunto(selIngreso.value) : PERFILES[elegido].correo,
         password: clave.input.value
       }).then(function (res) {
         if (res.error) throw res.error;
@@ -3946,7 +4239,7 @@ footer .credito { margin: 10px 0 0; font-weight: 600; text-align: right; }
           err.hidden = false;
           return;
         }
-        abrirApp(perfilDeRol(rol));
+        abrirApp(perfilDeRol(rol.rol), rol.punto);
       }).catch(function (e) {
         entrar.disabled = false;
         entrar.textContent = "Entrar";
@@ -4039,6 +4332,586 @@ footer .credito { margin: 10px 0 0; font-weight: 600; text-align: right; }
     window.scrollTo({ top: 0 });
   });
 
+  /* ---------- solicitudes de los puntos ---------- */
+
+  function correoPunto(id) { return "punto-" + id + "@buffaloribs.app"; }
+
+  fillSelect(el.s.punto, PUNTOS.map(function (p) { return { value: p.id, label: p.nombre }; }), "Elige el punto");
+  fillSelect(el.s.categoria, CATEGORIAS.map(function (c) { return { value: c.id, label: c.corto }; }), "No estoy seguro / otro");
+  fillSelect(el.s.urgencia, URGENCIAS);
+  fillSelect(el.p.categoria, CATEGORIAS.map(function (c) { return { value: c.id, label: c.corto }; }), "Elige la categoría");
+  fillSelect(el.p.prioridad, PRIORIDADES.map(function (t) { return { value: t, label: t }; }));
+
+  function contarNuevas() {
+    return state.solicitudes.filter(function (s) { return s.estado === "Nueva"; }).length;
+  }
+
+  /* Pestañas, contador de nuevas y título de la pestaña del navegador. */
+  function marcarSolicitudes() {
+    var nuevas = state.perfil && state.perfil !== "punto" ? contarNuevas() : 0;
+    el.solCount.textContent = String(nuevas);
+    el.solCount.hidden = nuevas === 0;
+    el.secciones.hidden = !state.perfil || state.perfil === "punto";
+    el.tabMant.setAttribute("aria-pressed", state.seccion === "mantenimientos" ? "true" : "false");
+    el.tabSol.setAttribute("aria-pressed", state.seccion === "solicitudes" ? "true" : "false");
+    document.body.classList.toggle("en-solicitudes", state.seccion === "solicitudes");
+    document.body.classList.toggle("modo-punto", state.perfil === "punto");
+    document.title = (state.perfil === "coordinador" && nuevas ? "(" + nuevas + ") " : "") + TITULO;
+  }
+
+  function irASeccion(s) {
+    state.seccion = s;
+    state.confirmar = null;
+    render();
+    window.scrollTo({ top: 0 });
+  }
+  el.tabMant.addEventListener("click", function () { irASeccion("mantenimientos"); });
+  el.tabSol.addEventListener("click", function () { irASeccion("solicitudes"); });
+
+  /* Las nuevas primero; luego de la más reciente a la más antigua. */
+  function solicitudesVisibles() {
+    var lista = state.solicitudes.slice();
+    if (state.perfil !== "punto") {
+      if (state.punto !== "todos") {
+        lista = lista.filter(function (s) { return s.punto === state.punto; });
+      }
+      lista = lista.filter(function (s) {
+        if (state.solFiltro === "nuevas") return s.estado === "Nueva";
+        if (state.solFiltro === "abiertas") return SOL_ABIERTAS.indexOf(s.estado) !== -1;
+        if (state.solFiltro === "cerradas") return SOL_ABIERTAS.indexOf(s.estado) === -1;
+        return true;
+      });
+    }
+    lista.sort(function (a, b) {
+      var na = a.estado === "Nueva" ? 0 : 1;
+      var nb = b.estado === "Nueva" ? 0 : 1;
+      if (na !== nb) return na - nb;
+      return String(b.creado).localeCompare(String(a.creado));
+    });
+    return lista;
+  }
+
+  function vistaSolicitudes() {
+    var wrap = document.createElement("section");
+    wrap.className = "cat";
+
+    var head = document.createElement("div");
+    head.className = "solhead";
+    var h = document.createElement("h2");
+    h.textContent = state.perfil === "punto"
+      ? "Solicitudes de " + nombrePunto(state.miPunto)
+      : "Solicitudes de los puntos";
+    head.appendChild(h);
+    if (state.perfil === "punto" || state.perfil === "coordinador") {
+      var nueva = document.createElement("button");
+      nueva.type = "button";
+      nueva.className = "primary";
+      nueva.textContent = state.perfil === "punto" ? "Nueva solicitud" : "Registrar solicitud";
+      nueva.addEventListener("click", abrirSolicitud);
+      head.appendChild(nueva);
+    }
+    wrap.appendChild(head);
+
+    if (state.perfil === "punto") {
+      var guia = document.createElement("p");
+      guia.className = "solguia";
+      guia.textContent = "Reporta aquí los daños o arreglos imprevistos del punto. El coordinador les asigna " +
+        "prioridad y fecha, y aquí ves en qué va cada una.";
+      wrap.appendChild(guia);
+    } else {
+      wrap.appendChild(filtrosSolicitud());
+    }
+
+    var av = bloqueAvisos();
+    if (av) wrap.appendChild(av);
+
+    if (!state.solCargadas) {
+      wrap.appendChild(panel("Cargando solicitudes", ["Estamos trayendo las solicitudes guardadas."], []));
+      return wrap;
+    }
+
+    var lista = solicitudesVisibles();
+    if (!lista.length) {
+      var vacio = document.createElement("p");
+      vacio.className = "cat-empty";
+      vacio.textContent = state.perfil === "punto"
+        ? "Todavía no has enviado solicitudes. Usa \"Nueva solicitud\" cuando algo se dañe o necesite arreglo."
+        : "No hay solicitudes con este filtro.";
+      wrap.appendChild(vacio);
+      return wrap;
+    }
+
+    var grid = document.createElement("div");
+    grid.className = "cards";
+    lista.forEach(function (s) { grid.appendChild(tarjetaSolicitud(s)); });
+    wrap.appendChild(grid);
+    return wrap;
+  }
+
+  function filtrosSolicitud() {
+    var box = document.createElement("div");
+    box.className = "viewtoggle solfiltros";
+    box.setAttribute("role", "group");
+    box.setAttribute("aria-label", "Qué solicitudes ver");
+    [["abiertas", "Abiertas"], ["nuevas", "Nuevas"], ["cerradas", "Cerradas"], ["todas", "Todas"]].forEach(function (par) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.textContent = par[1];
+      b.setAttribute("aria-pressed", state.solFiltro === par[0] ? "true" : "false");
+      b.addEventListener("click", function () {
+        state.solFiltro = par[0];
+        render();
+      });
+      box.appendChild(b);
+    });
+    return box;
+  }
+
+  function botonChico(texto, cls, fn) {
+    var b = document.createElement("button");
+    b.type = "button";
+    b.className = "tiny" + (cls ? " " + cls : "");
+    b.textContent = texto;
+    b.addEventListener("click", fn);
+    return b;
+  }
+
+  function tarjetaSolicitud(s) {
+    var card = document.createElement("article");
+    card.className = "card sev-" + (s.prioridad || s.urgencia || "Media");
+
+    var p = document.createElement("p");
+    p.className = "card-desc";
+    p.textContent = s.descripcion || "Sin descripción";
+    card.appendChild(p);
+
+    var bs = document.createElement("div");
+    bs.className = "badges";
+    bs.appendChild(badge(s.estado, SOL_CLASS[s.estado] || "neutral"));
+    bs.appendChild(badge("Urgencia " + String(s.urgencia || "Media").toLowerCase(), "prio-" + (s.urgencia || "Media")));
+    if (s.afecta_operacion) bs.appendChild(badge("Impide operar", "st-Pendiente"));
+    if (s.categoria) bs.appendChild(badge(categoriaCorta(s.categoria), "neutral"));
+    card.appendChild(bs);
+
+    var dl = document.createElement("dl");
+    dl.className = "dl";
+    if (state.perfil !== "punto") pareja(dl, "Punto", nombrePunto(s.punto), true);
+    pareja(dl, "Reportó", s.reportado_por || "—", true);
+    pareja(dl, "Enviada", fechaHora(s.creado) || "—");
+    if (s.fecha_programada) pareja(dl, "Programada", fecha(s.fecha_programada));
+    if (s.prioridad) pareja(dl, "Prioridad", s.prioridad, true);
+    card.appendChild(dl);
+
+    if (s.respuesta) {
+      var r = document.createElement("p");
+      r.className = "solresp";
+      var b = document.createElement("b");
+      b.textContent = "Coordinación: ";
+      r.appendChild(b);
+      r.appendChild(document.createTextNode(s.respuesta));
+      card.appendChild(r);
+    }
+
+    var fotos = Array.isArray(s.fotos) ? s.fotos : [];
+    if (fotos.length) {
+      var fb = document.createElement("div");
+      fb.className = "soportes";
+      fotos.forEach(function (f, i) {
+        var a = document.createElement("button");
+        a.type = "button";
+        a.className = "sop ok";
+        a.textContent = "Foto " + (i + 1);
+        a.addEventListener("click", function () { verSoporte(f); });
+        fb.appendChild(a);
+      });
+      card.appendChild(fb);
+    }
+
+    var acts = document.createElement("div");
+    acts.className = "card-actions";
+    if (state.perfil === "coordinador" && s.estado === "Nueva") {
+      acts.appendChild(botonChico("Programar", "primary", function () { abrirProgramar(s, "programar"); }));
+      acts.appendChild(botonChico("Rechazar", "danger", function () { abrirProgramar(s, "rechazar"); }));
+    } else if (state.perfil !== "punto" && s.mantenimiento_id) {
+      acts.appendChild(botonChico("Ver mantenimiento", "", function () { verMantenimiento(s.mantenimiento_id); }));
+    }
+    if (acts.children.length) card.appendChild(acts);
+    return card;
+  }
+
+  function verMantenimiento(id) {
+    for (var i = 0; i < state.registros.length; i++) {
+      if (state.registros[i].id === id) { abrirFicha(state.registros[i]); return; }
+    }
+    toast("Ese mantenimiento ya no está en el registro.");
+  }
+
+  /* ---------- avisos ---------- */
+
+  function bloqueAvisos() {
+    /* Los avisos son para quien atiende (coordinador) y para el punto que reporta. */
+    if (!("Notification" in window) || state.perfil === "consulta") return null;
+    var box = document.createElement("div");
+    box.className = "solavisos";
+    var quePasa = state.perfil === "punto"
+      ? "cuando el coordinador programe o responda tus solicitudes"
+      : "cada vez que un punto envíe una solicitud";
+    if (Notification.permission === "granted") {
+      box.textContent = "Avisos activados en este dispositivo: te llega una notificación " + quePasa +
+        ", mientras la app esté abierta.";
+      return box;
+    }
+    if (Notification.permission === "denied") {
+      box.textContent = "Los avisos están bloqueados en este navegador. Para recibirlos, permite las " +
+        "notificaciones de este sitio en la configuración del navegador.";
+      return box;
+    }
+    var t = document.createElement("span");
+    t.textContent = "Recibe una notificación " + quePasa + ".";
+    box.appendChild(t);
+    box.appendChild(botonChico("Activar avisos en este dispositivo", "primary", function () {
+      var pedir = Notification.requestPermission();
+      if (pedir && pedir.then) {
+        pedir.then(function (permiso) {
+          if (permiso === "granted") {
+            avisarSistema("Avisos activados", "Así te llegarán los avisos de las solicitudes.", "brc-prueba");
+          }
+          render();
+        });
+      }
+    }));
+    return box;
+  }
+
+  /* En los teléfonos la notificación solo se puede mostrar a través del trabajador del navegador. */
+  function avisarSistema(titulo, cuerpo, etiqueta) {
+    if (!("Notification" in window) || Notification.permission !== "granted") return;
+    var opciones = { body: cuerpo, tag: etiqueta, icon: "img/brc-logo-color.svg" };
+    function directo() {
+      try { new Notification(titulo, opciones); } catch (e) { /* el navegador no la admite */ }
+    }
+    if (navigator.serviceWorker && navigator.serviceWorker.getRegistration) {
+      navigator.serviceWorker.getRegistration().then(function (reg) {
+        if (reg && reg.showNotification) return reg.showNotification(titulo, opciones);
+        directo();
+      }).catch(directo);
+      return;
+    }
+    directo();
+  }
+
+  /* Cambio en vivo: el coordinador recibe las nuevas y el punto los cambios de estado de las suyas. */
+  function cambioSolicitud(p) {
+    var nueva = p && p.new;
+    if (p && p.eventType === "INSERT" && nueva && state.perfil === "coordinador" && nueva.creado_por !== state.uid) {
+      var titulo = "Nueva solicitud · " + nombrePunto(nueva.punto);
+      toast(titulo + ": " + String(nueva.descripcion || "").slice(0, 80));
+      avisarSistema(titulo,
+        (nueva.urgencia === "Alta" ? "Urgencia alta · " : "") + String(nueva.descripcion || "").slice(0, 140),
+        "sol-" + nueva.id);
+    }
+    if (p && p.eventType === "UPDATE" && nueva && state.perfil === "punto") {
+      var antes = null;
+      state.solicitudes.forEach(function (s) { if (s.id === nueva.id) antes = s; });
+      if (antes && antes.estado !== nueva.estado) {
+        var msg = "Tu solicitud quedó " + String(nueva.estado).toLowerCase() +
+          (nueva.fecha_programada && nueva.estado === "Programada" ? " para el " + fecha(nueva.fecha_programada) : "") + ".";
+        toast(msg);
+        avisarSistema("Solicitud " + String(nueva.estado).toLowerCase(),
+          String(nueva.descripcion || "").slice(0, 100), "sol-" + nueva.id);
+      }
+    }
+    cargarSolicitudes();
+  }
+
+  function cargarSolicitudes() {
+    if (!sb) return Promise.resolve();
+    return sb.from("solicitudes").select("*").order("creado", { ascending: false }).then(function (res) {
+      if (res.error) throw res.error;
+      var primera = !state.solCargadas;
+      state.solicitudes = res.data || [];
+      state.solCargadas = true;
+      render();
+      var n = contarNuevas();
+      if (primera && state.perfil === "coordinador" && n) {
+        toast(n === 1 ? "Tienes 1 solicitud nueva de los puntos." : "Tienes " + n + " solicitudes nuevas de los puntos.");
+      }
+    }).catch(function () {
+      state.solCargadas = true;
+      render();
+    });
+  }
+
+  /* ---------- formulario de solicitud ---------- */
+
+  var solFotos = [];
+
+  function abrirSolicitud() {
+    var esPunto = state.perfil === "punto";
+    el.solError.hidden = true;
+    el.solPuntoWrap.hidden = esPunto;
+    el.s.punto.value = esPunto ? state.miPunto : (state.punto !== "todos" ? state.punto : "");
+    el.s.reporta.value = esPunto ? (lee("brc.reporta") || "") : "";
+    el.s.categoria.value = "";
+    el.s.urgencia.value = "Media";
+    el.s.descripcion.value = "";
+    el.s.afecta.checked = false;
+    el.s.fotos.value = "";
+    solFotos = [];
+    pintarFotos();
+    el.solOverlay.hidden = false;
+    setTimeout(function () { (el.s.reporta.value ? el.s.descripcion : el.s.reporta).focus(); }, 30);
+  }
+
+  function cerrarSolicitud() {
+    el.solOverlay.hidden = true;
+    solFotos = [];
+  }
+
+  el.solCancelar.addEventListener("click", cerrarSolicitud);
+  el.solOverlay.addEventListener("click", function (ev) {
+    if (ev.target === el.solOverlay) cerrarSolicitud();
+  });
+
+  function pintarFotos() {
+    el.s.fotosPrev.textContent = "";
+    solFotos.forEach(function (f, i) {
+      var chip = document.createElement("span");
+      chip.className = "fotochip";
+      chip.appendChild(document.createTextNode(f.name || "Foto " + (i + 1)));
+      chip.appendChild(botonChico("Quitar", "", function () {
+        solFotos.splice(i, 1);
+        pintarFotos();
+      }));
+      el.s.fotosPrev.appendChild(chip);
+    });
+    el.s.fotos.disabled = solFotos.length >= 3;
+  }
+
+  el.s.fotos.addEventListener("change", function () {
+    Array.prototype.forEach.call(el.s.fotos.files || [], function (f) {
+      if (solFotos.length < 3) solFotos.push(f);
+    });
+    el.s.fotos.value = "";
+    pintarFotos();
+  });
+
+  /* Reduce la foto a 1600 px de lado y la pasa a JPG: las del teléfono pesan varios MB. */
+  function reducirFoto(archivo) {
+    return new Promise(function (listo) {
+      var url = URL.createObjectURL(archivo);
+      var img = new Image();
+      img.onload = function () {
+        var k = Math.min(1, 1600 / Math.max(img.naturalWidth, img.naturalHeight));
+        var c = document.createElement("canvas");
+        c.width = Math.max(1, Math.round(img.naturalWidth * k));
+        c.height = Math.max(1, Math.round(img.naturalHeight * k));
+        c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+        URL.revokeObjectURL(url);
+        c.toBlob(function (b) { listo(b || archivo); }, "image/jpeg", 0.82);
+      };
+      img.onerror = function () {
+        URL.revokeObjectURL(url);
+        listo(archivo);
+      };
+      img.src = url;
+    });
+  }
+
+  function subirFotos(punto) {
+    return Promise.all(solFotos.map(function (archivo, i) {
+      return reducirFoto(archivo).then(function (blob) {
+        var tipo = blob.type || archivo.type || "";
+        if (["image/jpeg", "image/png", "image/webp"].indexOf(tipo) === -1) throw { codigo: "tipo" };
+        if (blob.size > 10 * 1024 * 1024) throw { codigo: "grande" };
+        var ext = tipo === "image/png" ? ".png" : (tipo === "image/webp" ? ".webp" : ".jpg");
+        var nombre = rutaSegura(String(archivo.name || "foto").replace(/\.[^.]+$/, "")) + ext;
+        var ruta = punto + "/" + Date.now() + "-" + i + "-" + nombre;
+        return sb.storage.from("solicitudes").upload(ruta, blob, { contentType: tipo, upsert: false })
+          .then(function (res) {
+            if (res.error) throw res.error;
+            return { archivo: ruta, nombre: nombre, tipo: tipo, bucket: "solicitudes" };
+          });
+      });
+    }));
+  }
+
+  function restaurarSolicitud() {
+    el.solEnviar.disabled = false;
+    el.solEnviar.textContent = "Enviar solicitud";
+  }
+
+  el.solForm.addEventListener("submit", function (ev) {
+    ev.preventDefault();
+    var s = el.s;
+    var punto = state.perfil === "punto" ? state.miPunto : s.punto.value;
+    var faltan = [];
+    if (!punto) faltan.push("el punto de venta");
+    if (!s.reporta.value.trim()) faltan.push("quién reporta");
+    if (!s.descripcion.value.trim()) faltan.push("la descripción del problema");
+    if (faltan.length) {
+      el.solError.textContent = "Falta " + faltan.join(", ") + ".";
+      el.solError.hidden = false;
+      return;
+    }
+    if (!sb) return sinBase();
+
+    el.solEnviar.disabled = true;
+    el.solEnviar.textContent = solFotos.length ? "Subiendo fotos…" : "Enviando…";
+    el.solError.hidden = true;
+    if (state.perfil === "punto") guarda("brc.reporta", s.reporta.value.trim());
+
+    subirFotos(punto).then(function (fotos) {
+      el.solEnviar.textContent = "Enviando…";
+      return sb.from("solicitudes").insert({
+        punto: punto,
+        reportado_por: s.reporta.value.trim(),
+        categoria: s.categoria.value || null,
+        descripcion: s.descripcion.value.trim(),
+        urgencia: s.urgencia.value,
+        afecta_operacion: s.afecta.checked,
+        fotos: fotos
+      });
+    }).then(function (res) {
+      if (res && res.error) throw res.error;
+      restaurarSolicitud();
+      cerrarSolicitud();
+      toast(state.perfil === "punto" ? "Solicitud enviada. El coordinador ya la puede ver." : "Solicitud registrada.");
+      return cargarSolicitudes();
+    }).catch(function (e) {
+      restaurarSolicitud();
+      el.solError.textContent = e && e.codigo === "tipo"
+        ? "Una de las fotos no es JPG, PNG o WebP. Tómala de nuevo o elige otra."
+        : (e && e.codigo === "grande"
+          ? "Una de las fotos es demasiado pesada. Elige otra."
+          : "No se pudo enviar la solicitud. Revisa la conexión e intenta de nuevo.");
+      el.solError.hidden = false;
+    });
+  });
+
+  /* ---------- programar o rechazar ---------- */
+
+  var solEnCurso = null;
+  var progModo = "programar";
+
+  function abrirProgramar(s, modo) {
+    var p = el.p;
+    var programar = modo === "programar";
+    solEnCurso = s;
+    progModo = modo;
+    el.progTitulo.textContent = programar ? "Programar solicitud" : "Rechazar solicitud";
+    el.progResumen.textContent = nombrePunto(s.punto) + " · " + (s.descripcion || "");
+    Array.prototype.forEach.call(el.progForm.querySelectorAll(".soloprog"), function (n) { n.hidden = !programar; });
+    p.categoria.value = s.categoria || "";
+    p.prioridad.value = s.urgencia || "Media";
+    p.fecha.value = "";
+    p.responsable.value = "";
+    p.costo.value = "";
+    p.respuesta.value = "";
+    p.respuestaLabel.textContent = programar ? "Mensaje para el punto (opcional)" : "Motivo, para que el punto lo sepa";
+    el.progGuardar.textContent = programar ? "Programar" : "Rechazar";
+    el.progGuardar.className = programar ? "primary" : "danger";
+    el.progError.hidden = true;
+    el.progOverlay.hidden = false;
+    setTimeout(function () { (programar ? (p.categoria.value ? p.fecha : p.categoria) : p.respuesta).focus(); }, 30);
+  }
+
+  function cerrarProgramar() {
+    el.progOverlay.hidden = true;
+    solEnCurso = null;
+  }
+
+  el.progCancelar.addEventListener("click", cerrarProgramar);
+  el.progOverlay.addEventListener("click", function (ev) {
+    if (ev.target === el.progOverlay) cerrarProgramar();
+  });
+
+  function errorProgramar(texto) {
+    el.progError.textContent = texto;
+    el.progError.hidden = false;
+  }
+
+  function restaurarProgramar() {
+    el.progGuardar.disabled = false;
+    el.progGuardar.textContent = progModo === "programar" ? "Programar" : "Rechazar";
+  }
+
+  el.progForm.addEventListener("submit", function (ev) {
+    ev.preventDefault();
+    var s = solEnCurso;
+    var p = el.p;
+    if (!s) return;
+    if (!sb) return sinBase();
+
+    if (progModo === "rechazar") {
+      if (!p.respuesta.value.trim()) return errorProgramar("Escribe el motivo para que el punto lo sepa.");
+      el.progGuardar.disabled = true;
+      el.progGuardar.textContent = "Guardando…";
+      sb.from("solicitudes").update({ estado: "Rechazada", respuesta: p.respuesta.value.trim() }).eq("id", s.id)
+        .then(function (res) {
+          if (res && res.error) throw res.error;
+          restaurarProgramar();
+          cerrarProgramar();
+          toast("Solicitud rechazada. El punto verá el motivo.");
+          return cargarSolicitudes();
+        }).catch(function (e) {
+          restaurarProgramar();
+          fallo(e);
+        });
+      return;
+    }
+
+    var faltan = [];
+    if (!p.categoria.value) faltan.push("la categoría");
+    if (!p.fecha.value) faltan.push("la fecha programada");
+    if (faltan.length) return errorProgramar("Falta " + faltan.join(" y ") + ".");
+
+    el.progGuardar.disabled = true;
+    el.progGuardar.textContent = "Programando…";
+    var obs = "Solicitud de " + nombrePunto(s.punto) +
+      (s.reportado_por ? " (" + s.reportado_por + ")" : "") +
+      ", enviada el " + fechaHora(s.creado) + "." +
+      (s.afecta_operacion ? " Impide operar." : "");
+
+    /* Se crea el mantenimiento correctivo y la solicitud queda enlazada a él. */
+    sb.from("mantenimientos").insert({
+      punto: s.punto,
+      categoria: p.categoria.value,
+      descripcion: s.descripcion,
+      tipo: "Correctivo",
+      prioridad: p.prioridad.value,
+      estado: "Programado",
+      estado_pago: "Pendiente",
+      responsable: p.responsable.value.trim(),
+      fecha_programada: p.fecha.value,
+      fecha_realizada: null,
+      costo_estimado: p.costo.value === "" ? null : Number(p.costo.value),
+      costo_real: null,
+      observaciones: obs,
+      soportes: {}
+    }).select("id").single().then(function (res) {
+      if (res.error) throw res.error;
+      return sb.from("solicitudes").update({
+        estado: "Programada",
+        prioridad: p.prioridad.value,
+        fecha_programada: p.fecha.value,
+        respuesta: p.respuesta.value.trim(),
+        mantenimiento_id: res.data.id
+      }).eq("id", s.id);
+    }).then(function (res) {
+      if (res && res.error) throw res.error;
+      var cuando = fecha(p.fecha.value);
+      restaurarProgramar();
+      cerrarProgramar();
+      toast("Solicitud programada para el " + cuando + ". Ya está en los mantenimientos.");
+      cargarDatos();
+      return cargarSolicitudes();
+    }).catch(function (e) {
+      restaurarProgramar();
+      fallo(e);
+    });
+  });
+
   /* ---------- datos ---------- */
 
   function cargarDatos() {
@@ -4073,6 +4946,7 @@ footer .credito { margin: 10px 0 0; font-weight: 600; text-align: right; }
     if (!sb || canal) return;
     canal = sb.channel("tablero")
       .on("postgres_changes", { event: "*", schema: "public", table: "mantenimientos" }, cargarDatos)
+      .on("postgres_changes", { event: "*", schema: "public", table: "solicitudes" }, cambioSolicitud)
       .on("postgres_changes", { event: "*", schema: "public", table: "estado_coordinador" }, cargarEstado)
       .subscribe();
   }
@@ -4090,6 +4964,11 @@ footer .credito { margin: 10px 0 0; font-weight: 600; text-align: right; }
   }
 
   /* ---------- arranque ---------- */
+
+  /* Trabajador del navegador: en los teléfonos las notificaciones solo se pueden mostrar a través de él. */
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("sw.js").catch(function () { /* sin avisos del sistema */ });
+  }
 
   render();
 
