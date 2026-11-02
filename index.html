@@ -1687,11 +1687,12 @@ body.en-planes .periodoactivo { display: none !important; }
     align-items: center;
     justify-content: center;
     gap: 2px;
-    padding: 8px 2px 7px;
-    font-size: .68rem;
+    padding: 8px 1px 7px;
+    font-size: .66rem;
     color: var(--fg-muted);
     position: relative;
   }
+  .tablbl { display: block; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .secctoggle button[aria-pressed="true"] { background: transparent; color: var(--marca-rojo); font-weight: 700; }
   .tabico {
     display: block;
@@ -1706,19 +1707,24 @@ body.en-planes .periodoactivo { display: none !important; }
     display: flex;
     align-items: center;
     justify-content: center;
+    gap: 6px;
     position: fixed;
     right: 16px;
-    bottom: calc(76px + env(safe-area-inset-bottom, 0px));
+    bottom: calc(16px + env(safe-area-inset-bottom, 0px));
     z-index: 31;
-    width: 56px; height: 56px;
-    border-radius: 50%;
+    height: 52px;
+    padding: 0 20px 0 16px;
+    border-radius: 999px;
     border: 0;
     background: var(--marca-rojo);
     color: #ffffff;
-    font-size: 2rem;
+    font-size: .95rem;
+    font-weight: 700;
     line-height: 1;
     box-shadow: 0 8px 20px -8px rgba(0, 0, 0, .55);
   }
+  .fabmas { font-size: 1.7rem; font-weight: 400; line-height: 1; margin-top: -2px; }
+  body.con-barra .fab { bottom: calc(76px + env(safe-area-inset-bottom, 0px)); }
   .fab[hidden] { display: none; }
   body.con-barra #toast { bottom: calc(env(safe-area-inset-bottom, 0px) + 80px); }
 }
@@ -1844,7 +1850,7 @@ body.en-planes .periodoactivo { display: none !important; }
   <div class="band-inner">
     <div class="viewtoggle secctoggle" role="group" aria-label="Sección del tablero">
       <button type="button" id="tabHoy" aria-pressed="true"><svg class="tabico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l9-7 9 7v9H14v-6h-4v6H3z"/></svg><span class="tablbl">Hoy</span></button>
-      <button type="button" id="tabMant" aria-pressed="false"><svg class="tabico" viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 5.5a4 4 0 0 0 4.9 4.9l-9 9a2.1 2.1 0 0 1-3-3l9-9a4 4 0 0 1-1.9-1.9"/></svg><span class="tablbl"><span class="tl-largo">Mantenimientos</span><span class="tl-corto">Trabajos</span></span></button>
+      <button type="button" id="tabMant" aria-pressed="false"><svg class="tabico" viewBox="0 0 24 24" aria-hidden="true"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.8-3.8a6 6 0 0 1-7.9 7.9l-6.9 6.9a2.1 2.1 0 0 1-3-3l6.9-6.9a6 6 0 0 1 7.9-7.9z"/></svg><span class="tablbl"><span class="tl-largo">Mantenimientos</span><span class="tl-corto">Trabajos</span></span></button>
       <button type="button" id="tabSol" aria-pressed="false"><svg class="tabico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/></svg><span class="tablbl">Solicitudes</span> <span class="solcount" id="solCount" hidden></span></button>
       <button type="button" id="tabAct" aria-pressed="false"><svg class="tabico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7l8-4 8 4v10l-8 4-8-4z"/><path d="M4 7l8 4 8-4M12 11v10"/></svg><span class="tablbl">Activos</span></button>
       <button type="button" id="tabFin" aria-pressed="false"><svg class="tabico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg><span class="tablbl">Finanzas</span></button>
@@ -1852,7 +1858,7 @@ body.en-planes .periodoactivo { display: none !important; }
   </div>
 </nav>
 
-<button type="button" class="fab" id="fab" aria-label="Crear" hidden>+</button>
+<button type="button" class="fab" id="fab" hidden><span class="fabmas" aria-hidden="true">+</span>Nueva solicitud</button>
 
 <section class="estadobar">
   <div class="band-inner" id="estadoBarInner"></div>
@@ -5131,7 +5137,7 @@ body.en-planes .periodoactivo { display: none !important; }
     document.body.classList.toggle("en-hoy", state.seccion === "hoy");
     document.body.classList.toggle("en-planes", state.seccion === "planes");
     document.body.classList.toggle("modo-punto", state.perfil === "punto");
-    el.fab.hidden = state.perfil !== "coordinador" || soloLectura() || state.seccion === "solicitudes";
+    el.fab.hidden = !(state.perfil === "punto" || (state.perfil === "coordinador" && !soloLectura()));
     document.title = (state.perfil === "coordinador" && nuevas ? "(" + nuevas + ") " : "") + TITULO;
   }
 
@@ -5145,13 +5151,8 @@ body.en-planes .periodoactivo { display: none !important; }
   el.tabMant.addEventListener("click", function () { irASeccion("mantenimientos"); });
   el.btnPlanes.addEventListener("click", function () { abrirMenu(false); irASeccion("planes"); });
 
-  /* El botón "+" crea lo que corresponde a la sección en la que se está. */
-  el.fab.addEventListener("click", function () {
-    if (state.seccion === "planes") return abrirPlan(null);
-    if (state.seccion === "activos") return abrirActivo(null);
-    if (state.seccion === "finanzas") return abrirMovimiento(null, "Egreso");
-    abrirForm(null);
-  });
+  /* El botón flotante registra una solicitud nueva, también las que llegan por WhatsApp. */
+  el.fab.addEventListener("click", abrirSolicitud);
   el.tabSol.addEventListener("click", function () { irASeccion("solicitudes"); });
   el.tabAct.addEventListener("click", function () { irASeccion("activos"); });
   el.tabFin.addEventListener("click", function () { irASeccion("finanzas"); });
