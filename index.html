@@ -5,14 +5,24 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <!-- La página trae su propio tema oscuro: así el navegador del teléfono no la oscurece por su cuenta. -->
 <meta name="color-scheme" content="light dark">
+<script>
+/* Aplica el tema elegido antes de pintar, para que no se vea un instante el contrario. */
+try {
+  var temaGuardado = localStorage.getItem("brc.tema");
+  if (temaGuardado === "claro") document.documentElement.setAttribute("data-theme", "light");
+  else if (temaGuardado === "oscuro") document.documentElement.setAttribute("data-theme", "dark");
+} catch (e) { /* sin almacenamiento */ }
+</script>
 <meta name="description" content="Control de mantenimientos y proyectos de los puntos de venta de Buffalo Ribs Company.">
 <meta name="robots" content="noindex, nofollow">
 <link rel="icon" href="img/brc-logo-color.svg">
 
 <style>
 /* Base del documento. */
+/* "only light": en tema claro el navegador del teléfono no debe oscurecer la página por su cuenta.
+   El tema oscuro propio lo cambia a "dark" más abajo. */
 :root {
-  color-scheme: light;
+  color-scheme: only light;
   padding-top: env(safe-area-inset-top, 0px);
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
