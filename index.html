@@ -4074,6 +4074,7 @@ body.modo-punto #btnCsv { display: none !important; }
     dejarEstadoPortada();
     sb.auth.getSession().then(function (res) {
       state.uid = res.data && res.data.session ? res.data.session.user.id : null;
+      suscribirPush();
     });
     render();
     if (perfil !== "punto") cargarDatos();
@@ -4091,7 +4092,7 @@ body.modo-punto #btnCsv { display: none !important; }
     marcarVista();
     state.registros = [];
     state.cargado = false;
-    if (sb) sb.auth.signOut();
+    if (sb) quitarPush().then(function () { sb.auth.signOut(); });
     el.gate.hidden = false;
     state.seccion = "mantenimientos";
     state.miPunto = null;
@@ -4558,7 +4559,7 @@ body.modo-punto #btnCsv { display: none !important; }
       : "cada vez que un punto envíe una solicitud";
     if (Notification.permission === "granted") {
       box.textContent = "Avisos activados en este dispositivo: te llega una notificación " + quePasa +
-        ", mientras la app esté abierta.";
+        (pushDisponible() ? ", aunque la app esté cerrada." : ", mientras la app esté abierta.");
       return box;
     }
     if (Notification.permission === "denied") {
@@ -4574,6 +4575,7 @@ body.modo-punto #btnCsv { display: none !important; }
       if (pedir && pedir.then) {
         pedir.then(function (permiso) {
           if (permiso === "granted") {
+            suscribirPush();
             avisarSistema("Avisos activados", "Así te llegarán los avisos de las solicitudes.", "brc-prueba");
           }
           render();
@@ -4598,6 +4600,53 @@ body.modo-punto #btnCsv { display: none !important; }
       return;
     }
     directo();
+  }
+
+  /* ---------- avisos push: llegan aunque la app esté cerrada ---------- */
+
+  var FUNCION_AVISOS = (window.CONFIG || {}).supabaseUrl + "/functions/v1/avisos-push";
+
+  function pushDisponible() {
+    return "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
+  }
+
+  function bytesDeClave(b64) {
+    var limpio = String(b64).replace(/-/g, "+").replace(/_/g, "/");
+    while (limpio.length % 4) limpio += "=";
+    var crudo = atob(limpio);
+    var out = new Uint8Array(crudo.length);
+    for (var i = 0; i < crudo.length; i++) out[i] = crudo.charCodeAt(i);
+    return out;
+  }
+
+  /* Registra este dispositivo en el servidor con la cuenta abierta. */
+  function suscribirPush() {
+    if (!sb || !pushDisponible() || Notification.permission !== "granted") return Promise.resolve(false);
+    if (state.perfil !== "coordinador" && state.perfil !== "punto") return Promise.resolve(false);
+    return navigator.serviceWorker.ready.then(function (reg) {
+      return reg.pushManager.getSubscription().then(function (sub) {
+        if (sub) return sub;
+        return fetch(FUNCION_AVISOS).then(function (r) { return r.json(); }).then(function (d) {
+          return reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: bytesDeClave(d.clave) });
+        });
+      });
+    }).then(function (sub) {
+      var j = sub.toJSON();
+      return sb.rpc("registrar_push", { p_endpoint: j.endpoint, p_p256dh: j.keys.p256dh, p_auth: j.keys.auth });
+    }).then(function (res) {
+      if (res && res.error) throw res.error;
+      return true;
+    }).catch(function () { return false; });
+  }
+
+  /* Al salir, este dispositivo deja de recibir los avisos de esa cuenta. */
+  function quitarPush() {
+    if (!sb || !pushDisponible()) return Promise.resolve();
+    return navigator.serviceWorker.getRegistration().then(function (reg) {
+      return reg ? reg.pushManager.getSubscription() : null;
+    }).then(function (sub) {
+      if (sub) return sb.rpc("quitar_push", { p_endpoint: sub.endpoint });
+    }).catch(function () { /* sin conexión: el servidor lo limpia cuando falle un envío */ });
   }
 
   /* Cambio en vivo: el coordinador recibe las nuevas y el punto los cambios de estado de las suyas. */
