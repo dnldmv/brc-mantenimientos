@@ -4868,10 +4868,11 @@ body.modo-punto #btnCsv { display: none !important; }
 
     el.progGuardar.disabled = true;
     el.progGuardar.textContent = "Programando…";
+    /* fechaHora() termina en "p. m.": se separa con " · " para no repetir el punto. */
     var obs = "Solicitud de " + nombrePunto(s.punto) +
       (s.reportado_por ? " (" + s.reportado_por + ")" : "") +
-      ", enviada el " + fechaHora(s.creado) + "." +
-      (s.afecta_operacion ? " Impide operar." : "");
+      " · enviada el " + fechaHora(s.creado) +
+      (s.afecta_operacion ? " · Impide operar" : "");
 
     /* Se crea el mantenimiento correctivo y la solicitud queda enlazada a él. */
     sb.from("mantenimientos").insert({
