@@ -1301,6 +1301,10 @@ body.en-solicitudes .metrics,
 body.en-solicitudes .controls,
 body.en-solicitudes .filtrowrap,
 body.en-solicitudes .periodoactivo,
+body.en-activos .metrics,
+body.en-activos .controls,
+body.en-activos .filtrowrap,
+body.en-activos .periodoactivo,
 body.modo-punto .metrics,
 body.modo-punto .controls,
 body.modo-punto .filtrowrap,
@@ -1360,7 +1364,98 @@ body.modo-punto #btnCsv { display: none !important; }
 }
 @media (max-width: 640px) {
   .secctoggle { display: flex; width: 100%; }
-  .secctoggle button { flex: 1; justify-content: center; }
+  .secctoggle button { flex: 1; justify-content: center; padding-inline: 8px; }
+}
+
+/* ---------- Hoja de vida de activos ---------- */
+/* Formularios, fichas y visor se abren por encima de la hoja de vida. */
+#overlay, #fichaOverlay, #visorOverlay, #actOverlay { z-index: 45; }
+.actresumen { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; margin-bottom: 12px; }
+.actresumen div, .hojacostos div {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 9px 11px;
+  min-width: 0;
+}
+.actresumen span, .hojacostos span {
+  display: block;
+  font-size: .64rem;
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  font-weight: 600;
+  color: var(--fg-muted);
+}
+.actresumen b, .hojacostos b {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: .95rem;
+  font-weight: 500;
+  margin-top: 3px;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.actresumen .alerta b { color: var(--s-pend-fg); }
+.hojacostos { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; }
+.hojacostos .total { border-color: var(--accent); }
+.actfiltros { display: flex; flex-wrap: wrap; gap: 8px 10px; align-items: center; margin-bottom: 12px; }
+.actfiltros input, .actfiltros select {
+  font-family: var(--font-body);
+  font-size: .88rem;
+  padding: 8px 11px;
+  min-width: 0;
+  background: var(--surface);
+  color: var(--fg);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+}
+.actfiltros input { flex: 1 1 190px; }
+.actcodigo { display: block; font-family: var(--font-mono); font-size: .74rem; color: var(--fg-muted); margin-top: 3px; overflow-wrap: anywhere; }
+.vidabar { height: 6px; border-radius: 999px; background: var(--surface-3); overflow: hidden; }
+.vidabar i { display: block; height: 100%; background: var(--s-comp-fg); }
+.vidabar.media i { background: var(--s-curs-fg); }
+.vidabar.alta i { background: var(--s-pend-fg); }
+.vidatxt { font-size: .76rem; color: var(--fg-muted); margin-top: 4px; }
+.badge.ac-ok { background: var(--s-comp-bg); color: var(--s-comp-fg); }
+.badge.ac-rep { background: var(--s-curs-bg); color: var(--s-curs-fg); }
+.badge.ac-fuera { background: var(--s-pend-bg); color: var(--s-pend-fg); }
+.badge.ac-baja { background: var(--surface-2); color: var(--fg-muted); }
+.hojasheet { max-width: 820px; }
+.hojaaviso {
+  font-size: .84rem;
+  margin: 10px 0 0;
+  padding: 8px 10px;
+  border-left: 3px solid var(--s-pend-fg);
+  background: var(--s-pend-bg);
+  color: var(--s-pend-fg);
+  border-radius: var(--radius);
+}
+.hojaespec { margin: 0; padding-left: 18px; font-size: .86rem; }
+.intervlista { display: flex; flex-direction: column; gap: 6px; }
+button.interv {
+  display: grid;
+  grid-template-columns: 92px 1fr auto;
+  gap: 2px 10px;
+  align-items: start;
+  text-align: left;
+  width: 100%;
+  font-size: .84rem;
+  font-weight: 400;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--line-strong);
+  padding: 8px 10px;
+}
+button.interv.t-Correctivo { border-left-color: var(--p-alta); }
+button.interv.t-Preventivo { border-left-color: var(--s-comp-fg); }
+.interv .ifecha { font-family: var(--font-mono); font-size: .78rem; color: var(--fg-muted); }
+.interv .idesc { font-weight: 500; min-width: 0; overflow-wrap: break-word; }
+.interv .icosto { font-family: var(--font-mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.interv .isub { grid-column: 2 / 4; font-size: .74rem; color: var(--fg-muted); }
+@media (max-width: 640px) {
+  button.interv { grid-template-columns: 1fr auto; }
+  .interv .ifecha { grid-column: 1 / 3; }
+  .interv .isub { grid-column: 1 / 3; }
 }
 
 /* En el teléfono las etiquetas pequeñas se agrandan para que se lean sin esfuerzo. */
@@ -1467,6 +1562,7 @@ body.modo-punto #btnCsv { display: none !important; }
     <div class="viewtoggle secctoggle" role="group" aria-label="Sección del tablero">
       <button type="button" id="tabMant" aria-pressed="true">Mantenimientos</button>
       <button type="button" id="tabSol" aria-pressed="false">Solicitudes <span class="solcount" id="solCount" hidden></span></button>
+      <button type="button" id="tabAct" aria-pressed="false">Activos</button>
     </div>
   </div>
 </nav>
@@ -1515,6 +1611,10 @@ body.modo-punto #btnCsv { display: none !important; }
       <div class="f">
         <label for="fCategoria">Categoría</label>
         <select id="fCategoria"></select>
+      </div>
+      <div class="f wide">
+        <label for="fActivo">Activo (equipo)</label>
+        <select id="fActivo"></select>
       </div>
       <div class="f wide">
         <label for="fDescripcion">Descripción del trabajo</label>
@@ -1600,6 +1700,101 @@ body.modo-punto #btnCsv { display: none !important; }
   </div>
 </div>
 
+<div class="overlay" id="actOverlay" hidden>
+  <form class="sheet" id="actForm" novalidate>
+    <h2 id="actTitulo">Nuevo activo</h2>
+    <div class="formgrid">
+      <div class="f wide">
+        <label for="aNombre">Nombre del activo</label>
+        <input id="aNombre" maxlength="160" autocomplete="off" placeholder="Ej. Aire acondicionado mini split del salón">
+      </div>
+      <div class="f">
+        <label for="aPunto">Punto de venta</label>
+        <select id="aPunto"></select>
+      </div>
+      <div class="f">
+        <label for="aCategoria">Categoría</label>
+        <select id="aCategoria"></select>
+      </div>
+      <div class="f">
+        <label for="aUbicacion">Ubicación en el punto</label>
+        <input id="aUbicacion" maxlength="120" autocomplete="off" placeholder="Ej. Cocina, salón, barra">
+      </div>
+      <div class="f">
+        <label for="aEstado">Estado</label>
+        <select id="aEstado"></select>
+      </div>
+      <div class="f">
+        <label for="aCodigo">Código interno</label>
+        <input id="aCodigo" maxlength="40" autocomplete="off" placeholder="Si lo dejas vacío se asigna solo">
+      </div>
+      <div class="f">
+        <label for="aMarca">Marca</label>
+        <input id="aMarca" maxlength="80" autocomplete="off">
+      </div>
+      <div class="f">
+        <label for="aModelo">Modelo</label>
+        <input id="aModelo" maxlength="80" autocomplete="off">
+      </div>
+      <div class="f">
+        <label for="aSerie">Número de serie</label>
+        <input id="aSerie" maxlength="80" autocomplete="off">
+      </div>
+      <div class="f">
+        <label for="aProveedor">Proveedor o vendedor</label>
+        <input id="aProveedor" maxlength="120" autocomplete="off">
+      </div>
+      <div class="f">
+        <label for="aFechaCompra">Fecha de compra</label>
+        <input id="aFechaCompra" type="date">
+      </div>
+      <div class="f">
+        <label for="aCosto">Costo de compra (COP)</label>
+        <input id="aCosto" type="number" min="0" step="1000" inputmode="numeric" placeholder="0">
+      </div>
+      <div class="f">
+        <label for="aGarantia">Garantía hasta</label>
+        <input id="aGarantia" type="date">
+      </div>
+      <div class="f">
+        <label for="aVida">Vida útil estimada (años)</label>
+        <input id="aVida" type="number" min="0.5" max="100" step="0.5" inputmode="decimal" placeholder="Ej. 10">
+      </div>
+      <div class="f wide">
+        <label for="aEspec">Características técnicas</label>
+        <textarea id="aEspec" maxlength="4000" placeholder="Una por línea. Ej.:&#10;Capacidad: 24.000 BTU&#10;Voltaje: 220 V"></textarea>
+      </div>
+      <div class="f wide">
+        <label for="aNotas">Notas</label>
+        <textarea id="aNotas" maxlength="4000" placeholder="Accesorios, condiciones de la garantía, contacto del técnico…"></textarea>
+      </div>
+      <div class="f wide">
+        <label for="aFoto">Foto del activo o de su placa</label>
+        <input type="file" id="aFoto" accept="image/*">
+        <span class="hint" id="aFotoHint">Opcional.</span>
+      </div>
+    </div>
+    <div class="formerror" id="actError" hidden></div>
+    <div class="sheet-actions">
+      <button type="button" class="danger" id="actEliminar" hidden>Eliminar activo</button>
+      <button type="button" id="actCancelar">Cancelar</button>
+      <button type="submit" class="primary" id="actGuardar">Guardar</button>
+    </div>
+  </form>
+</div>
+
+<div class="overlay" id="hojaOverlay" hidden>
+  <div class="sheet hojasheet">
+    <h2>Hoja de vida</h2>
+    <div id="hojaBody"></div>
+    <div class="sheet-actions">
+      <button type="button" id="hojaEditar" hidden>Editar activo</button>
+      <button type="button" id="hojaInterv" hidden>Registrar intervención</button>
+      <button type="button" class="primary" id="hojaCerrar">Cerrar</button>
+    </div>
+  </div>
+</div>
+
 <div class="overlay" id="solOverlay" hidden>
   <form class="sheet" id="solForm" novalidate>
     <h2>Nueva solicitud</h2>
@@ -1650,6 +1845,10 @@ body.modo-punto #btnCsv { display: none !important; }
       <div class="f soloprog">
         <label for="pCategoria">Categoría</label>
         <select id="pCategoria"></select>
+      </div>
+      <div class="f soloprog">
+        <label for="pActivo">Activo (equipo)</label>
+        <select id="pActivo"></select>
       </div>
       <div class="f soloprog">
         <label for="pPrioridad">Prioridad</label>
@@ -1815,6 +2014,12 @@ body.modo-punto #btnCsv { display: none !important; }
   ];
   var TITULO = document.title;
 
+  /* Hoja de vida de los activos. */
+  var ESTADOS_ACT = ["Operativo", "En reparación", "Fuera de servicio", "Dado de baja"];
+  var AC_CLASS = { "Operativo": "ac-ok", "En reparación": "ac-rep", "Fuera de servicio": "ac-fuera", "Dado de baja": "ac-baja" };
+  var SIGLA_PUNTO = { "brc-41": "B41", "brc-unico": "UNI", "brc-viva-baq": "VIV", "brc-sincelejo": "SIN", "brc-carnaval": "CAR" };
+  var SIGLA_CAT = { humos: "COC", aire: "AIR", plagas: "PLA", infra: "INF" };
+
   var money = new Intl.NumberFormat("es-CO", {
     style: "currency", currency: "COP", maximumFractionDigits: 0
   });
@@ -1864,7 +2069,12 @@ body.modo-punto #btnCsv { display: none !important; }
     solicitudes: [],
     solCargadas: false,
     solFiltro: "abiertas",
-    uid: null
+    uid: null,
+    activos: [],
+    actCargados: false,
+    actQ: "",
+    actCat: "",
+    hojaId: null
   };
 
   var sb = null;          // cliente de Supabase
@@ -1959,7 +2169,41 @@ body.modo-punto #btnCsv { display: none !important; }
       responsable: document.getElementById("pResponsable"),
       costo: document.getElementById("pCosto"),
       respuesta: document.getElementById("pRespuesta"),
-      respuestaLabel: document.getElementById("pRespuestaLabel")
+      respuestaLabel: document.getElementById("pRespuestaLabel"),
+      activo: document.getElementById("pActivo")
+    },
+    tabAct: document.getElementById("tabAct"),
+    actOverlay: document.getElementById("actOverlay"),
+    actForm: document.getElementById("actForm"),
+    actTitulo: document.getElementById("actTitulo"),
+    actError: document.getElementById("actError"),
+    actEliminar: document.getElementById("actEliminar"),
+    actCancelar: document.getElementById("actCancelar"),
+    actGuardar: document.getElementById("actGuardar"),
+    hojaOverlay: document.getElementById("hojaOverlay"),
+    hojaBody: document.getElementById("hojaBody"),
+    hojaEditar: document.getElementById("hojaEditar"),
+    hojaInterv: document.getElementById("hojaInterv"),
+    hojaCerrar: document.getElementById("hojaCerrar"),
+    a: {
+      nombre: document.getElementById("aNombre"),
+      punto: document.getElementById("aPunto"),
+      categoria: document.getElementById("aCategoria"),
+      ubicacion: document.getElementById("aUbicacion"),
+      estado: document.getElementById("aEstado"),
+      codigo: document.getElementById("aCodigo"),
+      marca: document.getElementById("aMarca"),
+      modelo: document.getElementById("aModelo"),
+      serie: document.getElementById("aSerie"),
+      proveedor: document.getElementById("aProveedor"),
+      fechaCompra: document.getElementById("aFechaCompra"),
+      costo: document.getElementById("aCosto"),
+      garantia: document.getElementById("aGarantia"),
+      vida: document.getElementById("aVida"),
+      espec: document.getElementById("aEspec"),
+      notas: document.getElementById("aNotas"),
+      foto: document.getElementById("aFoto"),
+      fotoHint: document.getElementById("aFotoHint")
     },
     f: {
       punto: document.getElementById("fPunto"),
@@ -1974,7 +2218,8 @@ body.modo-punto #btnCsv { display: none !important; }
       costoEst: document.getElementById("fCostoEst"),
       costoReal: document.getElementById("fCostoReal"),
       pago: document.getElementById("fPago"),
-      observaciones: document.getElementById("fObservaciones")
+      observaciones: document.getElementById("fObservaciones"),
+      activo: document.getElementById("fActivo")
     }
   };
 
@@ -2604,6 +2849,9 @@ body.modo-punto #btnCsv { display: none !important; }
   }
 
   el.f.categoria.addEventListener("change", sugerencias);
+  el.f.punto.addEventListener("change", function () {
+    llenarActivos(el.f.activo, el.f.punto.value, "");
+  });
   function sugerencias() {
     var lista = TAREAS[el.f.categoria.value] || [];
     el.dlTareas.textContent = "";
@@ -2702,6 +2950,7 @@ body.modo-punto #btnCsv { display: none !important; }
   function render() {
     marcarRol();
     marcarSolicitudes();
+    if (state.hojaId && !el.hojaOverlay.hidden) pintarHoja(state.hojaId);
     renderEstadoCoord();
     renderMetrics();
     renderStatus();
@@ -2861,6 +3110,10 @@ body.modo-punto #btnCsv { display: none !important; }
 
     if (state.seccion === "solicitudes") {
       el.content.appendChild(vistaSolicitudes());
+      return;
+    }
+    if (state.seccion === "activos") {
+      el.content.appendChild(vistaActivos());
       return;
     }
 
@@ -3432,6 +3685,7 @@ body.modo-punto #btnCsv { display: none !important; }
     dl.className = "ficha-dl";
     parFicha(dl, "Punto de venta", nombrePunto(r.punto));
     parFicha(dl, "Categoría", nombreCategoria(r.categoria));
+    if (r.activoId) parFicha(dl, "Activo", nombreActivo(r.activoId));
     parFicha(dl, "Responsable", r.responsable || "—");
     parFicha(dl, "Fecha programada", fecha(r.fechaProgramada), true);
     parFicha(dl, "Fecha realizada", fecha(r.fechaRealizada), true);
@@ -3563,6 +3817,7 @@ body.modo-punto #btnCsv { display: none !important; }
     f.costoReal.value = r && r.costoReal !== null && r.costoReal !== undefined ? r.costoReal : "";
     f.pago.value = r ? (PAGOS.indexOf(r.estadoPago) === -1 ? "Pendiente" : r.estadoPago) : "Pendiente";
     f.observaciones.value = r ? (r.observaciones || "") : "";
+    llenarActivos(f.activo, f.punto.value, r ? r.activoId : "");
 
     sugerencias();
     pintarAdjuntos(r);
@@ -3583,12 +3838,14 @@ body.modo-punto #btnCsv { display: none !important; }
   document.addEventListener("keydown", function (ev) {
     if (ev.key !== "Escape") return;
     if (!el.visorOverlay.hidden) { cerrarVisor(); return; }
+    if (!el.actOverlay.hidden) { cerrarActivo(); return; }
     if (!el.progOverlay.hidden) { cerrarProgramar(); return; }
     if (!el.solOverlay.hidden) { cerrarSolicitud(); return; }
     if (!el.filtrosPanel.hidden) { abrirFiltros(false); return; }
     if (!el.menuPanel.hidden) { abrirMenu(false); return; }
     if (!el.fichaOverlay.hidden) { cerrarFicha(); return; }
-    if (!el.overlay.hidden) cerrarForm();
+    if (!el.overlay.hidden) { cerrarForm(); return; }
+    if (!el.hojaOverlay.hidden) cerrarHoja();
   });
 
   el.form.addEventListener("submit", function (ev) {
@@ -3618,6 +3875,7 @@ body.modo-punto #btnCsv { display: none !important; }
       costoReal: f.costoReal.value === "" ? null : Number(f.costoReal.value),
       estadoPago: f.pago.value,
       observaciones: f.observaciones.value.trim(),
+      activoId: f.activo.value || "",
       actualizado: new Date().toISOString()
     };
 
@@ -3644,7 +3902,8 @@ body.modo-punto #btnCsv { display: none !important; }
       costoEstimado: f.costo_estimado === null || f.costo_estimado === undefined ? null : Number(f.costo_estimado),
       costoReal: f.costo_real === null || f.costo_real === undefined ? null : Number(f.costo_real),
       observaciones: f.observaciones || "",
-      soportes: f.soportes && typeof f.soportes === "object" ? f.soportes : {}
+      soportes: f.soportes && typeof f.soportes === "object" ? f.soportes : {},
+      activoId: f.activo_id || ""
     };
   }
 
@@ -3663,7 +3922,8 @@ body.modo-punto #btnCsv { display: none !important; }
       costo_estimado: d.costoEstimado,
       costo_real: d.costoReal,
       observaciones: d.observaciones,
-      soportes: d.soportes || {}
+      soportes: d.soportes || {},
+      activo_id: d.activoId || null
     };
   }
 
@@ -4077,7 +4337,10 @@ body.modo-punto #btnCsv { display: none !important; }
       suscribirPush();
     });
     render();
-    if (perfil !== "punto") cargarDatos();
+    if (perfil !== "punto") {
+      cargarDatos();
+      cargarActivos();
+    }
     cargarEstado();
     cargarSolicitudes();
     escucharCambios();
@@ -4100,6 +4363,10 @@ body.modo-punto #btnCsv { display: none !important; }
     el.selPunto.value = "todos";
     state.solicitudes = [];
     state.solCargadas = false;
+    state.activos = [];
+    state.actCargados = false;
+    state.hojaId = null;
+    el.hojaOverlay.hidden = true;
     state.uid = null;
     marcarSolicitudes();
     marcarRol();
@@ -4355,7 +4622,9 @@ body.modo-punto #btnCsv { display: none !important; }
     el.secciones.hidden = !state.perfil || state.perfil === "punto";
     el.tabMant.setAttribute("aria-pressed", state.seccion === "mantenimientos" ? "true" : "false");
     el.tabSol.setAttribute("aria-pressed", state.seccion === "solicitudes" ? "true" : "false");
+    el.tabAct.setAttribute("aria-pressed", state.seccion === "activos" ? "true" : "false");
     document.body.classList.toggle("en-solicitudes", state.seccion === "solicitudes");
+    document.body.classList.toggle("en-activos", state.seccion === "activos");
     document.body.classList.toggle("modo-punto", state.perfil === "punto");
     document.title = (state.perfil === "coordinador" && nuevas ? "(" + nuevas + ") " : "") + TITULO;
   }
@@ -4368,6 +4637,7 @@ body.modo-punto #btnCsv { display: none !important; }
   }
   el.tabMant.addEventListener("click", function () { irASeccion("mantenimientos"); });
   el.tabSol.addEventListener("click", function () { irASeccion("solicitudes"); });
+  el.tabAct.addEventListener("click", function () { irASeccion("activos"); });
 
   /* Las nuevas primero; luego de la más reciente a la más antigua. */
   function solicitudesVisibles() {
@@ -4853,6 +5123,7 @@ body.modo-punto #btnCsv { display: none !important; }
     Array.prototype.forEach.call(el.progForm.querySelectorAll(".soloprog"), function (n) { n.hidden = !programar; });
     p.categoria.value = s.categoria || "";
     p.prioridad.value = s.urgencia || "Media";
+    llenarActivos(p.activo, s.punto, "");
     p.fecha.value = "";
     p.responsable.value = "";
     p.costo.value = "";
@@ -4938,7 +5209,8 @@ body.modo-punto #btnCsv { display: none !important; }
       costo_estimado: p.costo.value === "" ? null : Number(p.costo.value),
       costo_real: null,
       observaciones: obs,
-      soportes: {}
+      soportes: {},
+      activo_id: p.activo.value || null
     }).select("id").single().then(function (res) {
       if (res.error) throw res.error;
       return sb.from("solicitudes").update({
@@ -4960,6 +5232,627 @@ body.modo-punto #btnCsv { display: none !important; }
       restaurarProgramar();
       fallo(e);
     });
+  });
+
+  /* ---------- hoja de vida de activos ---------- */
+
+  fillSelect(el.a.punto, PUNTOS.map(function (p) { return { value: p.id, label: p.nombre }; }), "Elige el punto");
+  fillSelect(el.a.categoria, CATEGORIAS.map(function (c) { return { value: c.id, label: c.corto }; }), "Elige la categoría");
+  fillSelect(el.a.estado, ESTADOS_ACT.map(function (e) { return { value: e, label: e }; }));
+
+  function cargarActivos() {
+    if (!sb) return Promise.resolve();
+    return sb.from("activos").select("*").order("nombre").then(function (res) {
+      if (res.error) throw res.error;
+      state.activos = res.data || [];
+      state.actCargados = true;
+      render();
+    }).catch(function () {
+      state.actCargados = true;
+      render();
+    });
+  }
+
+  function buscarActivo(id) {
+    for (var i = 0; i < state.activos.length; i++) if (state.activos[i].id === id) return state.activos[i];
+    return null;
+  }
+
+  function nombreActivo(id) {
+    var a = buscarActivo(id);
+    return a ? a.nombre + " (" + a.codigo + ")" : "Activo no disponible";
+  }
+
+  /* Opciones de activo para los formularios: los del punto elegido. */
+  function llenarActivos(sel, punto, valor) {
+    var lista = state.activos.filter(function (a) { return a.punto === punto && a.estado !== "Dado de baja"; });
+    var actual = valor ? buscarActivo(valor) : null;
+    if (actual && lista.indexOf(actual) === -1) lista.push(actual);
+    var vacio = !punto ? "Elige primero el punto"
+      : (lista.length ? "Sin activo asociado" : "Este punto no tiene activos registrados");
+    fillSelect(sel, lista.map(function (a) { return { value: a.id, label: a.nombre + " · " + a.codigo }; }), vacio);
+    sel.value = valor || "";
+  }
+
+  function numero(v) {
+    return v === null || v === undefined || v === "" || isNaN(Number(v)) ? null : Number(v);
+  }
+
+  function fechaInterv(m) { return m.fechaRealizada || m.fechaProgramada || ""; }
+
+  /* Vida útil, costos e intervenciones de un activo, calculados con el registro de mantenimientos. */
+  function resumenActivo(a) {
+    var r = {
+      edad: null, pct: null, fin: "", valorLibros: null, garantia: "",
+      interv: [], preventivo: 0, correctivo: 0, otros: 0, ejecutado: 0, porEjecutar: 0,
+      ultima: "", proxima: ""
+    };
+    var vida = numero(a.vida_util_anios);
+    if (a.fecha_compra) {
+      var p = String(a.fecha_compra).split("-");
+      var compra = new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2]));
+      r.edad = Math.max(0, (Date.now() - compra.getTime()) / (365.25 * 24 * 3600 * 1000));
+      if (vida) {
+        r.pct = r.edad / vida;
+        var fin = new Date(compra.getTime());
+        fin.setMonth(fin.getMonth() + Math.round(vida * 12));
+        r.fin = fin.getFullYear() + "-" + dosDigitos(fin.getMonth() + 1) + "-" + dosDigitos(fin.getDate());
+        var costo = numero(a.costo_compra);
+        /* Depreciación en línea recta, sin valor residual. */
+        if (costo !== null) r.valorLibros = Math.max(0, costo * (1 - r.edad / vida));
+      }
+    }
+    if (a.garantia_hasta) r.garantia = a.garantia_hasta >= hoyIso() ? "vigente" : "vencida";
+
+    r.interv = state.registros.filter(function (m) { return m.activoId === a.id; });
+    r.interv.sort(function (x, y) { return String(fechaInterv(y)).localeCompare(String(fechaInterv(x))); });
+    r.interv.forEach(function (m) {
+      var real = numero(m.costoReal);
+      if (m.estado === "Completado" || real !== null) {
+        var c = real !== null ? real : (numero(m.costoEstimado) || 0);
+        r.ejecutado += c;
+        if (m.tipo === "Preventivo") r.preventivo += c;
+        else if (m.tipo === "Correctivo") r.correctivo += c;
+        else r.otros += c;
+        if (m.fechaRealizada && m.fechaRealizada > r.ultima) r.ultima = m.fechaRealizada;
+      } else {
+        r.porEjecutar += numero(m.costoEstimado) || 0;
+        if (m.fechaProgramada && (!r.proxima || m.fechaProgramada < r.proxima)) r.proxima = m.fechaProgramada;
+      }
+    });
+    return r;
+  }
+
+  function textoEdad(anios) {
+    if (anios === null) return "—";
+    if (anios < 1) {
+      var m = Math.round(anios * 12);
+      return m + (m === 1 ? " mes" : " meses");
+    }
+    var t = Math.round(anios * 10) / 10;
+    return String(t).replace(".", ",") + (t === 1 ? " año" : " años");
+  }
+
+  function barraVida(r) {
+    var box = document.createElement("div");
+    var bar = document.createElement("div");
+    bar.className = "vidabar" + (r.pct === null ? "" : (r.pct >= 0.9 ? " alta" : (r.pct >= 0.7 ? " media" : "")));
+    var i = document.createElement("i");
+    i.style.width = (r.pct === null ? 0 : Math.min(100, Math.round(r.pct * 100))) + "%";
+    bar.appendChild(i);
+    box.appendChild(bar);
+    var t = document.createElement("div");
+    t.className = "vidatxt";
+    t.textContent = r.pct === null
+      ? "Vida útil sin datos: falta la fecha de compra o los años de vida útil."
+      : Math.round(r.pct * 100) + "% de la vida útil · " + textoEdad(r.edad) + " de uso · " +
+        (r.pct >= 1 ? "cumplió su vida útil" : "termina " + fecha(r.fin));
+    box.appendChild(t);
+    return box;
+  }
+
+  function activosVisibles() {
+    var q = state.actQ.trim().toLowerCase();
+    return state.activos.filter(function (a) {
+      if (state.punto !== "todos" && a.punto !== state.punto) return false;
+      if (state.actCat && a.categoria !== state.actCat) return false;
+      if (!q) return true;
+      return [a.nombre, a.codigo, a.marca, a.modelo, a.serie, a.ubicacion, a.proveedor]
+        .join(" ").toLowerCase().indexOf(q) !== -1;
+    });
+  }
+
+  function vistaActivos() {
+    var wrap = document.createElement("section");
+    wrap.className = "cat";
+
+    var head = document.createElement("div");
+    head.className = "solhead";
+    var h = document.createElement("h2");
+    h.textContent = "Hoja de vida de activos";
+    head.appendChild(h);
+    if (state.perfil === "coordinador") {
+      var nuevo = document.createElement("button");
+      nuevo.type = "button";
+      nuevo.className = "primary";
+      nuevo.textContent = "Registrar activo";
+      nuevo.addEventListener("click", function () { abrirActivo(null); });
+      head.appendChild(nuevo);
+    }
+    wrap.appendChild(head);
+
+    if (!state.actCargados) {
+      wrap.appendChild(panel("Cargando activos", ["Estamos trayendo la hoja de vida de los equipos."], []));
+      return wrap;
+    }
+
+    var lista = activosVisibles();
+    wrap.appendChild(resumenActivos(lista));
+    wrap.appendChild(filtrosActivos());
+
+    if (!lista.length) {
+      var vacio = document.createElement("p");
+      vacio.className = "cat-empty";
+      vacio.textContent = state.activos.length
+        ? "No hay activos con este filtro."
+        : "Todavía no hay activos registrados." +
+          (state.perfil === "coordinador" ? " Usa \"Registrar activo\" para crear el primero." : "");
+      wrap.appendChild(vacio);
+      return wrap;
+    }
+
+    var grid = document.createElement("div");
+    grid.className = "cards";
+    lista.forEach(function (a) { grid.appendChild(tarjetaActivo(a)); });
+    wrap.appendChild(grid);
+    return wrap;
+  }
+
+  function cajaDato(etiqueta, valor, cls) {
+    var d = document.createElement("div");
+    if (cls) d.className = cls;
+    var s = document.createElement("span");
+    s.textContent = etiqueta;
+    var b = document.createElement("b");
+    b.textContent = valor;
+    d.appendChild(s);
+    d.appendChild(b);
+    return d;
+  }
+
+  function resumenActivos(lista) {
+    var compra = 0;
+    var gasto = 0;
+    var alFinal = 0;
+    lista.forEach(function (a) {
+      var r = resumenActivo(a);
+      compra += numero(a.costo_compra) || 0;
+      gasto += r.ejecutado;
+      if (r.pct !== null && r.pct >= 0.9 && a.estado !== "Dado de baja") alFinal++;
+    });
+    var box = document.createElement("div");
+    box.className = "actresumen";
+    box.appendChild(cajaDato("Activos", String(lista.length)));
+    box.appendChild(cajaDato("Valor de compra", cop(compra)));
+    box.appendChild(cajaDato("Gasto en intervenciones", cop(gasto)));
+    box.appendChild(cajaDato("Al final de su vida útil", String(alFinal), alFinal ? "alerta" : ""));
+    return box;
+  }
+
+  function filtrosActivos() {
+    var box = document.createElement("div");
+    box.className = "actfiltros";
+
+    var q = document.createElement("input");
+    q.type = "search";
+    q.placeholder = "Buscar activo";
+    q.setAttribute("aria-label", "Buscar por nombre, código, marca, modelo o serie");
+    q.value = state.actQ;
+    q.addEventListener("input", function () {
+      var pos = q.selectionStart;
+      state.actQ = q.value;
+      render();
+      var otra = el.content.querySelector(".actfiltros input");
+      if (otra) {
+        otra.focus();
+        try { otra.setSelectionRange(pos, pos); } catch (e) { /* sin posición */ }
+      }
+    });
+    box.appendChild(q);
+
+    var cat = document.createElement("select");
+    cat.setAttribute("aria-label", "Categoría de los activos");
+    fillSelect(cat, CATEGORIAS.map(function (c) { return { value: c.id, label: c.corto }; }), "Todas las categorías");
+    cat.value = state.actCat;
+    cat.addEventListener("change", function () {
+      state.actCat = cat.value;
+      render();
+    });
+    box.appendChild(cat);
+    return box;
+  }
+
+  function tarjetaActivo(a) {
+    var r = resumenActivo(a);
+    var card = document.createElement("article");
+    card.className = "card";
+
+    var top = document.createElement("div");
+    var p = document.createElement("p");
+    p.className = "card-desc";
+    p.textContent = a.nombre;
+    var cod = document.createElement("span");
+    cod.className = "actcodigo";
+    cod.textContent = a.codigo + " · " + nombrePunto(a.punto) + (a.ubicacion ? " · " + a.ubicacion : "");
+    top.appendChild(p);
+    top.appendChild(cod);
+    card.appendChild(top);
+
+    var bs = document.createElement("div");
+    bs.className = "badges";
+    bs.appendChild(badge(a.estado, AC_CLASS[a.estado] || "neutral"));
+    bs.appendChild(badge(categoriaCorta(a.categoria), "neutral"));
+    if (r.garantia === "vigente") bs.appendChild(badge("En garantía", "st-Programado"));
+    card.appendChild(bs);
+
+    card.appendChild(barraVida(r));
+
+    var dl = document.createElement("dl");
+    dl.className = "dl";
+    if (a.marca || a.modelo) pareja(dl, "Equipo", [a.marca, a.modelo].filter(Boolean).join(" "), true);
+    pareja(dl, "Compra", cop(a.costo_compra));
+    pareja(dl, "Intervenciones", r.interv.length + " · " + cop(r.ejecutado));
+    pareja(dl, "Última", r.ultima ? fecha(r.ultima) : "—");
+    if (r.proxima) pareja(dl, "Próxima", fecha(r.proxima));
+    card.appendChild(dl);
+
+    var acts = document.createElement("div");
+    acts.className = "card-actions";
+    acts.appendChild(botonChico("Ver hoja de vida", "primary", function () { abrirHoja(a.id); }));
+    card.appendChild(acts);
+    return card;
+  }
+
+  /* ---------- hoja de vida ---------- */
+
+  function abrirHoja(id) {
+    state.hojaId = id;
+    pintarHoja(id);
+    el.hojaOverlay.hidden = false;
+  }
+
+  function cerrarHoja() {
+    el.hojaOverlay.hidden = true;
+    state.hojaId = null;
+  }
+
+  el.hojaCerrar.addEventListener("click", cerrarHoja);
+  el.hojaOverlay.addEventListener("click", function (ev) {
+    if (ev.target === el.hojaOverlay) cerrarHoja();
+  });
+
+  function subtitulo(texto) {
+    var s = document.createElement("p");
+    s.className = "ficha-sub";
+    s.textContent = texto;
+    return s;
+  }
+
+  function aviso(texto) {
+    var p = document.createElement("p");
+    p.className = "hojaaviso";
+    p.textContent = texto;
+    return p;
+  }
+
+  function pintarHoja(id) {
+    var a = buscarActivo(id);
+    var body = el.hojaBody;
+    body.textContent = "";
+    if (!a) {
+      cerrarHoja();
+      return;
+    }
+    var r = resumenActivo(a);
+
+    var t = document.createElement("p");
+    t.className = "ficha-desc";
+    t.textContent = a.nombre;
+    body.appendChild(t);
+
+    var bs = document.createElement("div");
+    bs.className = "badges";
+    bs.appendChild(badge(a.estado, AC_CLASS[a.estado] || "neutral"));
+    bs.appendChild(badge(categoriaCorta(a.categoria), "neutral"));
+    if (r.garantia) bs.appendChild(badge("Garantía " + r.garantia, r.garantia === "vigente" ? "st-Programado" : "neutral"));
+    body.appendChild(bs);
+
+    var dl = document.createElement("dl");
+    dl.className = "ficha-dl";
+    parFicha(dl, "Código", a.codigo, true);
+    parFicha(dl, "Punto de venta", nombrePunto(a.punto));
+    parFicha(dl, "Ubicación", a.ubicacion || "—");
+    parFicha(dl, "Marca", a.marca || "—");
+    parFicha(dl, "Modelo", a.modelo || "—");
+    parFicha(dl, "Número de serie", a.serie || "—", true);
+    parFicha(dl, "Proveedor", a.proveedor || "—");
+    body.appendChild(dl);
+
+    if (a.foto && a.foto.archivo) {
+      var fb = document.createElement("div");
+      fb.className = "soportes";
+      fb.style.marginTop = "10px";
+      var fbtn = document.createElement("button");
+      fbtn.type = "button";
+      fbtn.className = "sop ok";
+      fbtn.textContent = "Ver foto";
+      fbtn.addEventListener("click", function () { verSoporte(a.foto); });
+      fb.appendChild(fbtn);
+      body.appendChild(fb);
+    }
+
+    body.appendChild(subtitulo("Vida útil"));
+    body.appendChild(barraVida(r));
+    var dv = document.createElement("dl");
+    dv.className = "ficha-dl";
+    parFicha(dv, "Fecha de compra", fecha(a.fecha_compra), true);
+    parFicha(dv, "Vida útil estimada", numero(a.vida_util_anios) ? textoEdad(numero(a.vida_util_anios)) : "—");
+    parFicha(dv, "Fin estimado", r.fin ? fecha(r.fin) : "—", true);
+    parFicha(dv, "Garantía hasta", a.garantia_hasta ? fecha(a.garantia_hasta) + " (" + r.garantia + ")" : "—", true);
+    body.appendChild(dv);
+
+    body.appendChild(subtitulo("Costos"));
+    var compra = numero(a.costo_compra);
+    var cs = document.createElement("div");
+    cs.className = "hojacostos";
+    cs.appendChild(cajaDato("Compra", cop(compra)));
+    cs.appendChild(cajaDato("Preventivos", cop(r.preventivo)));
+    cs.appendChild(cajaDato("Correctivos", cop(r.correctivo)));
+    if (r.otros) cs.appendChild(cajaDato("Proyectos y otros", cop(r.otros)));
+    cs.appendChild(cajaDato("Total intervenciones", cop(r.ejecutado)));
+    cs.appendChild(cajaDato("Costo total (compra + intervenciones)", cop((compra || 0) + r.ejecutado), "total"));
+    if (r.valorLibros !== null) cs.appendChild(cajaDato("Valor en libros estimado", cop(r.valorLibros)));
+    if (r.porEjecutar) cs.appendChild(cajaDato("Programado por ejecutar", cop(r.porEjecutar)));
+    body.appendChild(cs);
+
+    if (compra && r.correctivo >= compra * 0.5) {
+      body.appendChild(aviso("Los correctivos ya suman el " + Math.round(r.correctivo / compra * 100) +
+        "% de lo que costó el equipo: conviene evaluar si sale mejor reemplazarlo."));
+    }
+    if (r.pct !== null && r.pct >= 1 && a.estado !== "Dado de baja") {
+      body.appendChild(aviso("Ya cumplió su vida útil estimada. Revisa su estado y planea el reemplazo."));
+    }
+
+    if (a.especificaciones) {
+      body.appendChild(subtitulo("Características técnicas"));
+      var ul = document.createElement("ul");
+      ul.className = "hojaespec";
+      a.especificaciones.split(/\r?\n/).forEach(function (linea) {
+        if (!linea.trim()) return;
+        var li = document.createElement("li");
+        li.textContent = linea.trim();
+        ul.appendChild(li);
+      });
+      body.appendChild(ul);
+    }
+
+    if (a.notas) {
+      body.appendChild(subtitulo("Notas"));
+      var n = document.createElement("p");
+      n.className = "ficha-obs";
+      n.textContent = a.notas;
+      body.appendChild(n);
+    }
+
+    body.appendChild(subtitulo("Intervenciones (" + r.interv.length + ")"));
+    if (!r.interv.length) {
+      var sin = document.createElement("p");
+      sin.className = "cat-empty";
+      sin.textContent = "Sin intervenciones registradas." +
+        (state.perfil === "coordinador" ? " Usa \"Registrar intervención\" para agregar mantenimientos preventivos o arreglos." : "");
+      body.appendChild(sin);
+    } else {
+      var lista = document.createElement("div");
+      lista.className = "intervlista";
+      r.interv.forEach(function (m) {
+        var b = document.createElement("button");
+        b.type = "button";
+        b.className = "interv t-" + (m.tipo || "Otro");
+        b.title = "Ver la ficha del mantenimiento";
+        var f = document.createElement("span");
+        f.className = "ifecha";
+        f.textContent = fecha(fechaInterv(m));
+        var d = document.createElement("span");
+        d.className = "idesc";
+        d.textContent = m.descripcion || "Sin descripción";
+        var c = document.createElement("span");
+        c.className = "icosto";
+        var real = numero(m.costoReal);
+        c.textContent = real !== null ? cop(real) : (numero(m.costoEstimado) !== null ? cop(m.costoEstimado) + " est." : "—");
+        var sub = document.createElement("span");
+        sub.className = "isub";
+        sub.textContent = [m.tipo || "Sin tipo", m.estado, m.responsable].filter(Boolean).join(" · ");
+        b.appendChild(f);
+        b.appendChild(d);
+        b.appendChild(c);
+        b.appendChild(sub);
+        b.addEventListener("click", function () { abrirFicha(m); });
+        lista.appendChild(b);
+      });
+      body.appendChild(lista);
+    }
+
+    var puede = state.perfil === "coordinador";
+    el.hojaEditar.hidden = !puede;
+    el.hojaInterv.hidden = !puede;
+    el.hojaEditar.onclick = function () { abrirActivo(a); };
+    el.hojaInterv.onclick = function () { registrarIntervencion(a); };
+  }
+
+  /* Abre el formulario de mantenimiento ya ligado al activo. */
+  function registrarIntervencion(a) {
+    abrirForm(null);
+    var f = el.f;
+    el.sheetTitle.textContent = "Nueva intervención · " + a.nombre;
+    f.punto.value = a.punto;
+    f.categoria.value = a.categoria;
+    sugerencias();
+    llenarActivos(f.activo, a.punto, a.id);
+  }
+
+  /* ---------- formulario de activo ---------- */
+
+  var actEditando = null;
+
+  function abrirActivo(a) {
+    var x = el.a;
+    actEditando = a ? a.id : null;
+    el.actTitulo.textContent = a ? "Editar activo" : "Nuevo activo";
+    x.nombre.value = a ? a.nombre : "";
+    x.punto.value = a ? a.punto : (state.punto !== "todos" ? state.punto : "");
+    x.categoria.value = a ? a.categoria : (state.actCat || "");
+    x.ubicacion.value = a ? a.ubicacion : "";
+    x.estado.value = a ? a.estado : "Operativo";
+    x.codigo.value = a ? a.codigo : "";
+    x.marca.value = a ? a.marca : "";
+    x.modelo.value = a ? a.modelo : "";
+    x.serie.value = a ? a.serie : "";
+    x.proveedor.value = a ? a.proveedor : "";
+    x.fechaCompra.value = a && a.fecha_compra ? a.fecha_compra : "";
+    x.costo.value = a && numero(a.costo_compra) !== null ? numero(a.costo_compra) : "";
+    x.garantia.value = a && a.garantia_hasta ? a.garantia_hasta : "";
+    x.vida.value = a && numero(a.vida_util_anios) !== null ? numero(a.vida_util_anios) : "";
+    x.espec.value = a ? a.especificaciones : "";
+    x.notas.value = a ? a.notas : "";
+    x.foto.value = "";
+    x.fotoHint.textContent = a && a.foto ? "Ya tiene foto: si eliges otra, la reemplaza." : "Opcional.";
+    el.actEliminar.hidden = !a;
+    el.actError.hidden = true;
+    el.actOverlay.hidden = false;
+    setTimeout(function () { x.nombre.focus(); }, 30);
+  }
+
+  function cerrarActivo() {
+    el.actOverlay.hidden = true;
+    actEditando = null;
+  }
+
+  el.actCancelar.addEventListener("click", cerrarActivo);
+  el.actOverlay.addEventListener("click", function (ev) {
+    if (ev.target === el.actOverlay) cerrarActivo();
+  });
+
+  /* Código del tipo B41-AIR-01: punto, categoría y consecutivo. */
+  function codigoNuevo(punto, categoria) {
+    var base = (SIGLA_PUNTO[punto] || "BRC") + "-" + (SIGLA_CAT[categoria] || "ACT") + "-";
+    var usados = {};
+    state.activos.forEach(function (a) { usados[a.codigo] = true; });
+    var n = 1;
+    while (usados[base + dosDigitos(n)]) n++;
+    return base + dosDigitos(n);
+  }
+
+  function restaurarActivo() {
+    el.actGuardar.disabled = false;
+    el.actGuardar.textContent = "Guardar";
+  }
+
+  function errorActivo(texto) {
+    el.actError.textContent = texto;
+    el.actError.hidden = false;
+  }
+
+  el.actForm.addEventListener("submit", function (ev) {
+    ev.preventDefault();
+    var x = el.a;
+    var faltan = [];
+    if (!x.nombre.value.trim()) faltan.push("el nombre");
+    if (!x.punto.value) faltan.push("el punto de venta");
+    if (!x.categoria.value) faltan.push("la categoría");
+    if (faltan.length) return errorActivo("Falta " + faltan.join(", ") + ".");
+    var vida = x.vida.value === "" ? null : Number(x.vida.value);
+    if (vida !== null && !(vida > 0 && vida <= 100)) return errorActivo("La vida útil debe estar entre 0,5 y 100 años.");
+    if (!sb) return sinBase();
+
+    var previo = actEditando ? buscarActivo(actEditando) : null;
+    var fila = {
+      nombre: x.nombre.value.trim(),
+      punto: x.punto.value,
+      categoria: x.categoria.value,
+      ubicacion: x.ubicacion.value.trim(),
+      estado: x.estado.value,
+      codigo: x.codigo.value.trim() || codigoNuevo(x.punto.value, x.categoria.value),
+      marca: x.marca.value.trim(),
+      modelo: x.modelo.value.trim(),
+      serie: x.serie.value.trim(),
+      proveedor: x.proveedor.value.trim(),
+      fecha_compra: x.fechaCompra.value || null,
+      costo_compra: x.costo.value === "" ? null : Number(x.costo.value),
+      garantia_hasta: x.garantia.value || null,
+      vida_util_anios: vida,
+      especificaciones: x.espec.value.trim(),
+      notas: x.notas.value.trim()
+    };
+
+    el.actGuardar.disabled = true;
+    el.actGuardar.textContent = "Guardando…";
+    el.actError.hidden = true;
+
+    var archivo = x.foto.files && x.foto.files[0];
+    var subida = !archivo ? Promise.resolve() : reducirFoto(archivo).then(function (blob) {
+      var tipo = blob.type || archivo.type || "";
+      if (["image/jpeg", "image/png", "image/webp"].indexOf(tipo) === -1) throw { codigo: "tipo" };
+      var ext = tipo === "image/png" ? ".png" : (tipo === "image/webp" ? ".webp" : ".jpg");
+      var nombre = rutaSegura(String(archivo.name || "foto").replace(/\.[^.]+$/, "")) + ext;
+      var ruta = fila.punto + "/" + Date.now() + "-" + nombre;
+      return sb.storage.from("activos").upload(ruta, blob, { contentType: tipo, upsert: false }).then(function (res) {
+        if (res.error) throw res.error;
+        fila.foto = { archivo: ruta, nombre: nombre, tipo: tipo, bucket: "activos" };
+      });
+    });
+
+    var id = actEditando;
+    subida.then(function () {
+      return id
+        ? sb.from("activos").update(fila).eq("id", id).select("id").single()
+        : sb.from("activos").insert(fila).select("id").single();
+    }).then(function (res) {
+      if (res.error) throw res.error;
+      /* La foto anterior se borra cuando se reemplaza. */
+      if (fila.foto && previo && previo.foto && previo.foto.archivo) {
+        sb.storage.from("activos").remove([previo.foto.archivo]);
+      }
+      restaurarActivo();
+      cerrarActivo();
+      toast(id ? "Activo actualizado." : "Activo registrado.");
+      var nuevoId = res.data.id;
+      return cargarActivos().then(function () { abrirHoja(nuevoId); });
+    }).catch(function (e) {
+      restaurarActivo();
+      var dup = e && (e.code === "23505" || /duplicate|unique/i.test(e.message || ""));
+      errorActivo(e && e.codigo === "tipo"
+        ? "La foto debe ser JPG, PNG o WebP."
+        : (dup ? "Ese código ya lo tiene otro activo. Usa otro o déjalo vacío para asignarlo solo."
+          : "No se pudo guardar el activo. Intenta de nuevo."));
+    });
+  });
+
+  el.actEliminar.addEventListener("click", function () {
+    var a = buscarActivo(actEditando);
+    if (!a || !sb) return;
+    var n = state.registros.filter(function (m) { return m.activoId === a.id; }).length;
+    var pregunta = "¿Eliminar \"" + a.nombre + "\"? " +
+      (n ? "Sus " + n + " intervenciones se conservan en los mantenimientos, sin el enlace al activo. " : "") +
+      "No se puede deshacer.";
+    if (!window.confirm(pregunta)) return;
+    sb.from("activos").delete().eq("id", a.id).then(function (res) {
+      if (res.error) throw res.error;
+      if (a.foto && a.foto.archivo) sb.storage.from("activos").remove([a.foto.archivo]);
+      cerrarActivo();
+      cerrarHoja();
+      toast("Activo eliminado.");
+      return cargarActivos();
+    }).catch(fallo);
   });
 
   /* ---------- datos ---------- */
@@ -4997,6 +5890,7 @@ body.modo-punto #btnCsv { display: none !important; }
     canal = sb.channel("tablero")
       .on("postgres_changes", { event: "*", schema: "public", table: "mantenimientos" }, cargarDatos)
       .on("postgres_changes", { event: "*", schema: "public", table: "solicitudes" }, cambioSolicitud)
+      .on("postgres_changes", { event: "*", schema: "public", table: "activos" }, cargarActivos)
       .on("postgres_changes", { event: "*", schema: "public", table: "estado_coordinador" }, cargarEstado)
       .subscribe();
   }
