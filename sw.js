@@ -14,7 +14,8 @@ self.addEventListener("push", function (ev) {
   ev.waitUntil(self.registration.showNotification(d.titulo || "Mantenimientos BRC", {
     body: d.cuerpo || "",
     tag: d.etiqueta || undefined,
-    icon: "img/brc-logo-color.svg"
+    icon: "img/aviso-icono.png",
+    badge: "img/aviso-barra.png" /* el ícono pequeño de la barra de estado de Android */
   }));
 });
 
