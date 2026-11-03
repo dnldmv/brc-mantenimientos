@@ -1340,6 +1340,7 @@ body.modo-punto #btnCsv { display: none !important; }
   padding: 9px 12px;
   margin-bottom: 12px;
 }
+.solavisos-nota { flex-basis: 100%; color: var(--fg); font-weight: 500; }
 .solresp { font-size: .85rem; margin: 0; padding: 8px 10px; background: var(--surface-2); border-radius: var(--radius); overflow-wrap: break-word; }
 .progresumen { font-size: .86rem; color: var(--fg-muted); margin: -4px 0 12px; overflow-wrap: break-word; }
 .f label.checkline { display: flex; align-items: center; gap: 8px; font-size: .9rem; text-transform: none; letter-spacing: 0; color: var(--fg); font-weight: 500; }
@@ -5902,6 +5903,12 @@ body { font-variant-numeric: tabular-nums; }
 
   /* ---------- avisos ---------- */
 
+  /* Lo que pasó la última vez que se tocó "Activar avisos"; se muestra bajo el botón. */
+  var notaAvisos = "";
+  var COMO_PERMITIR = "Para activarlos: abre la app en Chrome, toca el ícono junto a la dirección " +
+    "› Permisos › Notificaciones › Permitir. Revisa también en los ajustes del teléfono " +
+    "› Aplicaciones › Chrome › Notificaciones que estén activadas.";
+
   function bloqueAvisos() {
     /* Los avisos son para quien atiende (coordinador) y para el punto que reporta. */
     if (!("Notification" in window) || state.perfil === "consulta") return null;
@@ -5913,28 +5920,43 @@ body { font-variant-numeric: tabular-nums; }
     if (Notification.permission === "granted") {
       box.textContent = "Avisos activados en este dispositivo: te llega una notificación " + quePasa +
         (pushDisponible() ? ", aunque la app esté cerrada." : ", mientras la app esté abierta.");
+      if (notaAvisos) box.textContent += " " + notaAvisos;
       return box;
     }
     if (Notification.permission === "denied") {
-      box.textContent = "Los avisos están bloqueados en este navegador. Para recibirlos, permite las " +
-        "notificaciones de este sitio en la configuración del navegador.";
+      box.textContent = "Los avisos están bloqueados en este dispositivo. " + COMO_PERMITIR;
       return box;
     }
     var t = document.createElement("span");
     t.textContent = "Recibe una notificación " + quePasa + ".";
     box.appendChild(t);
-    box.appendChild(botonChico("Activar avisos en este dispositivo", "primary", function () {
-      var pedir = Notification.requestPermission();
-      if (pedir && pedir.then) {
-        pedir.then(function (permiso) {
-          if (permiso === "granted") {
-            suscribirPush();
-            avisarSistema("Avisos activados", "Así te llegarán los avisos de las solicitudes.", "brc-prueba");
-          }
-          render();
-        });
-      }
-    }));
+    var boton = botonChico("Activar avisos en este dispositivo", "primary", function () {
+      boton.disabled = true;
+      boton.textContent = "Pidiendo permiso…";
+      var pedir;
+      try { pedir = Notification.requestPermission(); } catch (e) { pedir = null; }
+      Promise.resolve(pedir).then(function (permiso) {
+        permiso = permiso || Notification.permission;
+        if (permiso === "granted") {
+          avisarSistema("Avisos activados", "Así te llegarán los avisos de las solicitudes.", "brc-prueba");
+          return suscribirPush().then(function (ok) {
+            notaAvisos = ok || !pushDisponible() ? "" :
+              "Pero no se pudo registrar este dispositivo en el servidor; revisa la conexión y vuelve a abrir la app.";
+          });
+        }
+        /* Si el teléfono no mostró la pregunta, el permiso sigue sin decidir. */
+        notaAvisos = permiso === "denied" ? "" : "El teléfono no mostró la pregunta de permiso. " + COMO_PERMITIR;
+      }).catch(function () {
+        notaAvisos = "No se pudo pedir el permiso. " + COMO_PERMITIR;
+      }).then(render);
+    });
+    box.appendChild(boton);
+    if (notaAvisos) {
+      var nota = document.createElement("span");
+      nota.className = "solavisos-nota";
+      nota.textContent = notaAvisos;
+      box.appendChild(nota);
+    }
     return box;
   }
 
