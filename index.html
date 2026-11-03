@@ -2109,6 +2109,8 @@ body { font-variant-numeric: tabular-nums; }
 .estadotime { margin-left: auto; }
 /* Las tablas de Finanzas se desplazan dentro de su caja en lugar de salirse. */
 .fintabla { display: block; max-width: 100%; overflow-x: auto; }
+.actvista { margin-left: auto; }
+.actvista button { padding: 6px 12px; }
 @media (max-width: 640px) {
   .estadoblk { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: end; gap: 10px 12px; }
   .estadogrupo { display: flex; flex-wrap: wrap; align-items: center; }
@@ -2952,6 +2954,7 @@ body { font-variant-numeric: tabular-nums; }
     actCargados: false,
     actQ: "",
     actCat: "",
+    actVista: "tarjetas",
     hojaId: null,
     movimientos: [],
     finCargados: false,
@@ -6471,10 +6474,67 @@ body { font-variant-numeric: tabular-nums; }
       return wrap;
     }
 
+    if ((lee("brc.actVista") || state.actVista) === "tabla") {
+      wrap.appendChild(tablaActivos(lista));
+      return wrap;
+    }
     var grid = document.createElement("div");
     grid.className = "cards";
     lista.forEach(function (a) { grid.appendChild(tarjetaActivo(a)); });
     wrap.appendChild(grid);
+    return wrap;
+  }
+
+  /* Los activos en una tabla, para comparar equipos de un vistazo. */
+  function tablaActivos(lista) {
+    var wrap = document.createElement("div");
+    wrap.className = "tablewrap";
+    var t = document.createElement("table");
+    var cols = ["Activo", "Código", "Punto", "Categoría", "Estado", "Equipo", "Compra", "Costo",
+      "Vida útil", "Trabajos", "Gastado", "Última", "Próxima", "Hoja"];
+    var thead = document.createElement("thead");
+    var trh = document.createElement("tr");
+    cols.forEach(function (c) {
+      var th = document.createElement("th");
+      th.scope = "col";
+      th.textContent = c;
+      trh.appendChild(th);
+    });
+    thead.appendChild(trh);
+    t.appendChild(thead);
+
+    var tb = document.createElement("tbody");
+    lista.forEach(function (a) {
+      var r = resumenActivo(a);
+      var tr = document.createElement("tr");
+      celda(tr, a.nombre, "desc", true);
+      celda(tr, a.codigo || "—", "nowrap");
+      celda(tr, nombrePunto(a.punto), "nowrap");
+      celda(tr, categoriaCorta(a.categoria), "nowrap");
+      var tdE = document.createElement("td");
+      tdE.appendChild(badge(a.estado, AC_CLASS[a.estado] || "neutral"));
+      tr.appendChild(tdE);
+      celda(tr, [a.marca, a.modelo].filter(Boolean).join(" ") || "—", null, true);
+      celda(tr, fecha(a.fecha_compra), "num");
+      celda(tr, cop(a.costo_compra), "num");
+      celda(tr, r.pct === null ? "—" : Math.round(r.pct * 100) + " %", "num");
+      celda(tr, String(r.interv.length), "num");
+      celda(tr, cop(r.ejecutado), "num");
+      celda(tr, r.ultima ? fecha(r.ultima) : "—", "num");
+      celda(tr, r.proxima ? fecha(r.proxima) : "—", "num");
+      var tdH = document.createElement("td");
+      var ver = document.createElement("button");
+      ver.type = "button";
+      ver.className = "tiny";
+      ver.textContent = "Ver hoja";
+      ver.addEventListener("click", function () { abrirHoja(a.id); });
+      tdH.appendChild(ver);
+      tr.appendChild(tdH);
+      Array.prototype.forEach.call(tr.children, function (td, j) { td.setAttribute("data-label", cols[j]); });
+      tb.appendChild(tr);
+    });
+    t.appendChild(tb);
+    wrap.appendChild(t);
     return wrap;
   }
 
@@ -6539,6 +6599,26 @@ body { font-variant-numeric: tabular-nums; }
       render();
     });
     box.appendChild(cat);
+
+    /* Tarjetas o tabla; se recuerda en este navegador. */
+    var vista = lee("brc.actVista") || state.actVista;
+    var tog = document.createElement("div");
+    tog.className = "viewtoggle actvista";
+    tog.setAttribute("role", "group");
+    tog.setAttribute("aria-label", "Forma de ver los activos");
+    [["tarjetas", "Tarjetas"], ["tabla", "Tabla"]].forEach(function (op) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.textContent = op[1];
+      b.setAttribute("aria-pressed", vista === op[0] ? "true" : "false");
+      b.addEventListener("click", function () {
+        state.actVista = op[0];
+        guarda("brc.actVista", op[0]);
+        render();
+      });
+      tog.appendChild(b);
+    });
+    box.appendChild(tog);
     return box;
   }
 
