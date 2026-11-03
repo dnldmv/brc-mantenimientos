@@ -141,3 +141,7 @@ Me pides el cambio, yo lo subo al repositorio y Cloudflare publica la versión
 nueva sola.
 
 Los datos no se tocan al actualizar: viven en Supabase, no en el código.
+
+Si un cambio no aparece en la app después de unos minutos (por ejemplo, por una falla de
+los builds de Cloudflare), en el panel de Cloudflare: Workers & Pages › brc-mantenimientos ›
+Deployments › Retry. El estado de Cloudflare se consulta en https://www.cloudflarestatus.com.
