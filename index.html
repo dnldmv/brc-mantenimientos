@@ -1335,6 +1335,22 @@ body.modo-punto #btnCsv { display: none !important; }
   margin: 0;
 }
 .solguia { font-size: .86rem; color: var(--fg-muted); margin: 0 0 12px; max-width: 70ch; }
+/* Seguimiento de cada trabajo. */
+.seguultimo { font-size: .82rem; color: var(--fg-muted); margin: 8px 0 0; padding: 7px 10px; background: var(--accent-soft); border-radius: 10px; }
+.seguultimo b { color: var(--accent); font-weight: 600; }
+.seguform { display: flex; flex-direction: column; gap: 8px; margin: 0 0 12px; }
+.seguform textarea { width: 100%; resize: vertical; font: inherit; }
+.seguform > button { align-self: flex-start; }
+.segusug { gap: 6px; }
+.segusug .chip { font-size: .78rem; }
+.seguvacio { font-size: .85rem; color: var(--fg-muted); margin: 0; }
+.segulista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.segulista li { border-left: 3px solid var(--accent); background: var(--surface-2); border-radius: 0 10px 10px 0; padding: 8px 12px; }
+.segulista p { margin: 4px 0 0; font-size: .9rem; white-space: pre-wrap; overflow-wrap: anywhere; }
+.segucab { display: flex; align-items: center; gap: 10px; font-size: .78rem; color: var(--fg-muted); }
+.segucab span { white-space: nowrap; }
+.seguautor { font-weight: 600; }
+.segucab .tiny { margin-left: auto; }
 /* Preventivos del punto, debajo de sus solicitudes. */
 .prevpunto { margin-top: 28px; }
 .prevtitulo { font-size: .95rem; font-weight: 600; margin: 16px 0 8px; color: var(--fg); }
@@ -3045,6 +3061,7 @@ select { pointer-events: none; }
     seccion: "hoy",
     planes: [],
     planesCargados: false,
+    comentarios: [],
     miPunto: null,
     solicitudes: [],
     solCargadas: false,
@@ -4792,6 +4809,18 @@ select { pointer-events: none; }
       card.appendChild(o);
     }
 
+    /* La última nota de seguimiento, para ver de un vistazo en qué va. */
+    var ultima = comentariosDe(r.id)[0];
+    if (ultima) {
+      var u = document.createElement("p");
+      u.className = "seguultimo";
+      var cuando = document.createElement("b");
+      cuando.textContent = fechaHora(ultima.creado) + " · ";
+      u.appendChild(cuando);
+      u.appendChild(document.createTextNode(ultima.texto));
+      card.appendChild(u);
+    }
+
     if (!soloLectura()) {
       var acts = document.createElement("div");
       acts.className = "card-actions";
@@ -5000,6 +5029,12 @@ select { pointer-events: none; }
       body.appendChild(o);
     }
 
+    fichaActual = r;
+    var seg = document.createElement("div");
+    seg.id = "fichaSeguimiento";
+    body.appendChild(seg);
+    pintarSeguimiento(r, seg);
+
     el.fichaEditar.hidden = soloLectura();
     el.fichaEditar.onclick = function () {
       cerrarFicha();
@@ -5010,8 +5045,143 @@ select { pointer-events: none; }
   }
 
   function cerrarFicha() {
+    fichaActual = null;
     el.fichaOverlay.hidden = true;
     document.body.classList.remove("ficha-lateral");
+  }
+
+  /* ---------- seguimiento de cada trabajo ---------- */
+
+  /* Notas con fecha y hora: permisos, imprevistos, material pedido... La fecha y el autor
+     los pone el servidor; solo el coordinador escribe, la gerencia las lee. */
+  var fichaActual = null;
+  var SUGERENCIAS_SEGUIMIENTO = ["Solicitando permisos en el CC", "Permisos autorizados",
+    "Contratista manifiesta imprevisto", "Contratista solicita material"];
+
+  function comentariosDe(id) {
+    return state.comentarios.filter(function (c) { return c.mantenimiento_id === id; });
+  }
+
+  function cargarComentarios() {
+    if (!sb) return Promise.resolve();
+    return sb.from("comentarios").select("id, mantenimiento_id, texto, autor, autor_rol, creado")
+      .order("creado", { ascending: false }).then(function (res) {
+        if (res.error) throw res.error;
+        state.comentarios = res.data || [];
+        render();
+        var seg = document.getElementById("fichaSeguimiento");
+        if (fichaActual && seg) pintarSeguimiento(fichaActual, seg);
+      }).catch(function () { /* sin seguimiento: el resto del tablero sigue igual */ });
+  }
+
+  function pintarSeguimiento(r, cont) {
+    /* Si llega una nota nueva mientras se escribe otra, lo escrito no se pierde. */
+    var previo = cont.querySelector(".seguform textarea");
+    var borrador = previo ? previo.value : "";
+    cont.textContent = "";
+    var t = document.createElement("p");
+    t.className = "ficha-sub";
+    t.textContent = "Seguimiento";
+    cont.appendChild(t);
+
+    if (!soloLectura()) {
+      var form = formSeguimiento(r);
+      form.querySelector("textarea").value = borrador;
+      cont.appendChild(form);
+    }
+
+    var lista = comentariosDe(r.id);
+    if (!lista.length) {
+      var v = document.createElement("p");
+      v.className = "seguvacio";
+      v.textContent = "Todavía no hay notas de seguimiento en este trabajo.";
+      cont.appendChild(v);
+      return;
+    }
+    var ul = document.createElement("ol");
+    ul.className = "segulista";
+    lista.forEach(function (c) {
+      var li = document.createElement("li");
+      var cab = document.createElement("div");
+      cab.className = "segucab";
+      var cuando = document.createElement("span");
+      cuando.textContent = fechaHora(c.creado);
+      cab.appendChild(cuando);
+      var quien = document.createElement("span");
+      quien.className = "seguautor";
+      quien.textContent = c.autor_rol === "gerencia" ? "Gerencia" : "Coordinador";
+      cab.appendChild(quien);
+      if (!soloLectura() && c.autor === state.uid) {
+        cab.appendChild(botonChico("Borrar", "", function () { borrarComentario(c); }));
+      }
+      li.appendChild(cab);
+      var p = document.createElement("p");
+      p.textContent = c.texto;
+      li.appendChild(p);
+      ul.appendChild(li);
+    });
+    cont.appendChild(ul);
+  }
+
+  function formSeguimiento(r) {
+    var f = document.createElement("form");
+    f.className = "seguform";
+    var ta = document.createElement("textarea");
+    ta.rows = 2;
+    ta.maxLength = 1000;
+    ta.placeholder = "Escribe cómo va el trabajo…";
+    ta.setAttribute("aria-label", "Nueva nota de seguimiento");
+    f.appendChild(ta);
+
+    var sug = document.createElement("div");
+    sug.className = "chips segusug";
+    SUGERENCIAS_SEGUIMIENTO.forEach(function (s) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.className = "chip";
+      b.textContent = s;
+      b.addEventListener("click", function () {
+        ta.value = s;
+        ta.focus();
+      });
+      sug.appendChild(b);
+    });
+    f.appendChild(sug);
+
+    var enviar = document.createElement("button");
+    enviar.type = "submit";
+    enviar.className = "primary";
+    enviar.textContent = "Agregar nota";
+    f.appendChild(enviar);
+
+    f.addEventListener("submit", function (ev) {
+      ev.preventDefault();
+      var texto = ta.value.trim();
+      if (!texto || !sb) return;
+      enviar.disabled = true;
+      enviar.textContent = "Guardando…";
+      sb.from("comentarios").insert({ mantenimiento_id: r.id, texto: texto }).then(function (res) {
+        if (res.error) throw res.error;
+        ta.value = "";
+        toast("Nota guardada.");
+        return cargarComentarios();
+      }).catch(function () {
+        enviar.disabled = false;
+        enviar.textContent = "Agregar nota";
+        toast("No se pudo guardar la nota. Revisa la conexión e intenta de nuevo.");
+      });
+    });
+    return f;
+  }
+
+  function borrarComentario(c) {
+    if (!sb || !window.confirm("¿Borrar esta nota de seguimiento?")) return;
+    sb.from("comentarios").delete().eq("id", c.id).then(function (res) {
+      if (res.error) throw res.error;
+      return cargarComentarios();
+    }).catch(function () {
+      toast("No se pudo borrar la nota.");
+    });
   }
 
   el.fichaCerrar.addEventListener("click", cerrarFicha);
@@ -5713,6 +5883,7 @@ select { pointer-events: none; }
       cargarActivos();
       cargarMovimientos();
       cargarPlanes();
+      cargarComentarios();
     }
     cargarEstado();
     cargarSolicitudes();
@@ -5733,6 +5904,7 @@ select { pointer-events: none; }
     state.seccion = "hoy";
     state.planes = [];
     state.planesCargados = false;
+    state.comentarios = [];
     cerrarFicha();
     state.miPunto = null;
     state.punto = "todos";
@@ -8777,6 +8949,7 @@ select { pointer-events: none; }
       .on("postgres_changes", { event: "*", schema: "public", table: "activos" }, cargarActivos)
       .on("postgres_changes", { event: "*", schema: "public", table: "movimientos" }, cargarMovimientos)
       .on("postgres_changes", { event: "*", schema: "public", table: "planes" }, cargarPlanes)
+      .on("postgres_changes", { event: "*", schema: "public", table: "comentarios" }, cargarComentarios)
       .on("postgres_changes", { event: "*", schema: "public", table: "estado_coordinador" }, cargarEstado)
       .subscribe();
   }
