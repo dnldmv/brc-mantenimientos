@@ -2099,6 +2099,13 @@ button.metric[aria-pressed="true"] { box-shadow: inset 0 0 0 2px var(--accent); 
 .avatarbtn:hover, .avatarbtn[aria-expanded="true"] { background: #E4F78A; box-shadow: 0 0 0 4px rgba(215, 242, 92, .25); }
 .avatarbtn svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
 .topbar .avatarbtn:focus-visible { outline: 2px solid #FFFFFF; outline-offset: 3px; }
+/* Mismos colores y dibujo que el globo de cada perfil en la portada. */
+.avatarbtn.pg-consulta { background: #8197FF; color: #0F1430; }
+.avatarbtn.pg-coordinador { background: #2D4BF0; color: #FFFFFF; box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, .28); }
+.avatarbtn.pg-punto { background: #D7F25C; color: #0F1430; }
+.avatarbtn[class*="pg-"] svg { width: 27px; height: 27px; stroke-width: 1.5; stroke-linejoin: round; }
+.avatarbtn.pg-consulta:hover, .avatarbtn.pg-consulta[aria-expanded="true"] { background: #9AACFF; box-shadow: 0 0 0 4px rgba(129, 151, 255, .3); }
+.avatarbtn.pg-coordinador:hover, .avatarbtn.pg-coordinador[aria-expanded="true"] { background: #4A64F5; box-shadow: 0 0 0 4px rgba(45, 75, 240, .35); }
 .menurol { margin: 4px 11px 6px; font-size: .8rem; font-weight: 600; color: var(--fg-muted); }
 /* Filtros y periodo, ahora junto al buscador de Mantenimientos. */
 .controls #btnFiltros { padding-block: 8px; }
@@ -5309,7 +5316,22 @@ select { pointer-events: none; }
 
   /* ---------- rol ---------- */
 
+  /* El botón de la esquina lleva el mismo dibujo y color del globo con el que se entró. */
+  var AVATAR_GENERICO = el.btnMenu.innerHTML;
+
+  function pintarAvatar() {
+    var k = state.perfil;
+    el.btnMenu.className = "menubtn avatarbtn" + (k ? " pg-" + k : "");
+    if (!k || !GLOBOS || !GLOBOS[k]) {
+      el.btnMenu.innerHTML = AVATAR_GENERICO;
+      return;
+    }
+    el.btnMenu.textContent = "";
+    el.btnMenu.appendChild(globoPerfil(k).firstChild);
+  }
+
   function marcarRol() {
+    pintarAvatar();
     if (!state.perfil) {
       el.rolepill.hidden = true;
       el.btnClaves.hidden = true;
