@@ -34,7 +34,7 @@ img { max-width: 100%; }
 <title>Mantenimientos BRC</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
 
 <style>
 /* Layout: banda de encabezado fija con selector de punto, franja de indicadores,
@@ -1756,6 +1756,286 @@ body.en-planes .periodoactivo { display: none !important; }
   body.ficha-lateral .controls .band-inner { margin-right: 440px; margin-left: auto; }
 }
 
+/* ==========================================================================
+   Estilo Taskly: fondo azulado claro, cobalto como color principal, lima de
+   acento, tarjetas blancas muy redondeadas y la letra Outfit. Va al final para
+   que mande sobre las reglas de arriba.
+   ========================================================================== */
+:root {
+  --bg: #F3F5FF;
+  --surface: #FFFFFF;
+  --surface-2: #EEF1FB;
+  --surface-3: #E3E8FB;
+  --fg: #0F1430;
+  --fg-muted: #5B6280;
+  --line: #E3E7F5;
+  --line-strong: #CDD4EC;
+  --accent: #2D4BF0;
+  --accent-hover: #1C35C4;
+  --accent-fg: #FFFFFF;
+  --accent-soft: #E6EBFF;
+  --zest: #D7F25C;
+  --ink: #0F1430;
+
+  --s-pend-bg: #FFE4E2;  --s-pend-fg: #B42318;
+  --s-prog-bg: #E6EBFF;  --s-prog-fg: #2D4BF0;
+  --s-curs-bg: #FFF1D6;  --s-curs-fg: #8A5300;
+  --s-comp-bg: #E8F6CF;  --s-comp-fg: #3D6300;
+  --p-alta: #B42318;
+  --p-media: #8A5300;
+  --p-baja: #5B6280;
+
+  --font-display: "Outfit", "Segoe UI", system-ui, sans-serif;
+  --font-body: "Outfit", "Segoe UI", system-ui, sans-serif;
+  --radius: 14px;
+  --radius-lg: 22px;
+  --shadow: 0 1px 2px rgba(15, 20, 48, .04), 0 10px 28px -14px rgba(45, 75, 240, .22);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0A0E22;
+    --surface: #141A36;
+    --surface-2: #1B2247;
+    --surface-3: #252E5C;
+    --fg: #EEF0FA;
+    --fg-muted: #A3AACB;
+    --line: #232B52;
+    --line-strong: #343E6E;
+    --accent: #8197FF;
+    --accent-hover: #A1B1FF;
+    --accent-fg: #0A0E22;
+    --accent-soft: #1F2A63;
+    --ink: #050816;
+    --s-pend-bg: #3D1A1F;  --s-pend-fg: #FFA9A0;
+    --s-prog-bg: #1F2A63;  --s-prog-fg: #B3C2FF;
+    --s-curs-bg: #3A2C0D;  --s-curs-fg: #F0C477;
+    --s-comp-bg: #22340E;  --s-comp-fg: #C8EA7A;
+    --p-alta: #FFA9A0;
+    --p-media: #F0C477;
+    --p-baja: #A3AACB;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 10px 28px -14px rgba(0, 0, 0, .7);
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0A0E22;
+  --surface: #141A36;
+  --surface-2: #1B2247;
+  --surface-3: #252E5C;
+  --fg: #EEF0FA;
+  --fg-muted: #A3AACB;
+  --line: #232B52;
+  --line-strong: #343E6E;
+  --accent: #8197FF;
+  --accent-hover: #A1B1FF;
+  --accent-fg: #0A0E22;
+  --accent-soft: #1F2A63;
+  --ink: #050816;
+  --s-pend-bg: #3D1A1F;  --s-pend-fg: #FFA9A0;
+  --s-prog-bg: #1F2A63;  --s-prog-fg: #B3C2FF;
+  --s-curs-bg: #3A2C0D;  --s-curs-fg: #F0C477;
+  --s-comp-bg: #22340E;  --s-comp-fg: #C8EA7A;
+  --p-alta: #FFA9A0;
+  --p-media: #F0C477;
+  --p-baja: #A3AACB;
+  --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 10px 28px -14px rgba(0, 0, 0, .7);
+}
+
+/* Títulos y etiquetas en frase normal, sin mayúsculas sostenidas. */
+.brand-sub, .rolepill, .field-pick > label, .estadolab, .metric-k, .chiplabel, .periodoactivo,
+.cat-head h2, .catcard h3, .catcard-total span, .catcard-go, .badge, .ficha-sub, th,
+.panel h2, .sheet h2, .f label, .gateh2, .perfil b, .solhead h2, .actresumen span,
+.hojacostos span, .fincaja h3, .hoyhead h2, .hoybloque h3 {
+  text-transform: none;
+  letter-spacing: 0;
+}
+.cat-head h2, .solhead h2, .panel h2, .sheet h2, .gateh2, .fincaja h3, .hoybloque h3, .catcard h3 { font-weight: 600; }
+.hoyhead h2 { font-size: 1.9rem; font-weight: 700; }
+.metric-k, .chiplabel, .estadolab, .f label, .actresumen span, .hojacostos span, .field-pick > label { font-size: .78rem; font-weight: 500; }
+.brand-sub { font-weight: 600; font-size: 1.2rem; border-bottom-color: var(--zest); }
+.cat-head { border-bottom: 0; }
+
+/* Encabezado: bloque tinta con esquinas inferiores redondeadas. */
+.topbar { background: var(--ink); border-bottom: 0; border-radius: 0 0 26px 26px; }
+#selPunto { font-family: var(--font-body); font-weight: 600; border: 0; border-radius: 999px; padding: 9px 16px; }
+.topbar .filtrocount { background: var(--zest); color: var(--ink); }
+.periodoactivo { font-family: var(--font-body); font-weight: 600; }
+.gatebrand { background: var(--ink); border-bottom: 0; border-radius: var(--radius-lg); }
+
+/* Botones en píldora; el principal en cobalto. */
+button { border-radius: 999px; }
+button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); font-weight: 600; }
+button.primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); color: var(--accent-fg); }
+.topbar button.primary { background: var(--zest); border-color: var(--zest); color: var(--ink); }
+.menupanel { border-radius: 18px; border-color: var(--line); padding: 6px; }
+.menupanel button { border-radius: 12px; }
+.viewtoggle { border-radius: 999px; border-color: var(--line); background: var(--surface); padding: 3px; gap: 2px; }
+.viewtoggle button { border-radius: 999px; }
+.viewtoggle button[aria-pressed="true"] { background: var(--accent); color: var(--accent-fg); }
+.chip { border-color: var(--line-strong); }
+.chip[aria-pressed="true"], .filtrospanel .chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); }
+
+/* Campos. */
+.f input, .f select, .f textarea, #q, .mesinput, .estadosel, .actfiltros input, .actfiltros select {
+  border-radius: 12px;
+  border-color: var(--line-strong);
+}
+#q { border-radius: 999px; padding: 10px 16px; border-color: var(--line); }
+
+/* Tarjetas, paneles y hojas: blancas, sin bordes de color, muy redondeadas. */
+.card, .catcard, .panel, .tablewrap, .actresumen div, .hojacostos div, .solavisos, .gateestado {
+  border-radius: var(--radius-lg);
+  border-color: var(--line);
+  box-shadow: var(--shadow);
+}
+.card, .card.sev-Alta, .card.sev-Media, .card.sev-Baja { border-left: 1px solid var(--line); padding: 16px; }
+.card.vencido { border-color: var(--s-pend-fg); }
+.solavisos, .gateestado { border-left-width: 1px; }
+.sheet { background: var(--surface); border-color: var(--line); border-radius: 26px; padding: 22px; }
+.badge { border-radius: 999px; font-weight: 600; padding: 3px 10px; }
+
+/* Franja de indicadores: casillas sueltas en lugar de una tabla. */
+.metrics { background: transparent; border-bottom: 0; }
+.metrics .band-inner { padding-block: 14px 4px; }
+.metricgrid { gap: 10px; background: transparent; border: 0; border-radius: 0; overflow: visible; }
+.metric { border-radius: 18px; padding: 12px 14px; box-shadow: var(--shadow); }
+button.metric { border-radius: 18px; }
+button.metric[aria-pressed="true"] { box-shadow: inset 0 0 0 2px var(--accent); }
+.metric-v { font-size: 1.5rem; }
+.estadobar { background: transparent; border-bottom: 0; }
+
+/* Hoy: tarjeta cobalto de planes, casillas y filas en tarjeta blanca. */
+.hoyhero {
+  background: var(--accent);
+  color: #FFFFFF;
+  border-radius: 26px;
+  padding: 18px 20px;
+  margin-bottom: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-shadow: 0 16px 32px -16px rgba(45, 75, 240, .65);
+}
+:root[data-theme="dark"] .hoyhero { background: #2D4BF0; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .hoyhero { background: #2D4BF0; } }
+.hoyhero .hh-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.hoyhero .hh-chip { display: inline-flex; align-items: center; gap: 6px; background: rgba(255, 255, 255, .16); padding: 4px 11px; border-radius: 999px; font-size: .8rem; font-weight: 500; }
+.hoyhero .hh-chip::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--zest); }
+.hoyhero .hh-num { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.hoyhero .hh-num b { font-size: 2.8rem; font-weight: 700; line-height: 1; }
+.hoyhero .hh-num span { font-size: .92rem; color: #DCE2FF; }
+.hoyhero .hh-bar { height: 8px; border-radius: 999px; background: rgba(255, 255, 255, .22); overflow: hidden; }
+.hoyhero .hh-bar i { display: block; height: 100%; border-radius: 999px; background: var(--zest); }
+.hoyhero button { align-self: flex-start; background: var(--zest); color: #0F1430; border: 0; font-weight: 600; }
+.hoyhero button:hover { background: #E4F78A; }
+.hoytile { border-radius: 20px; border: 0; padding: 14px 16px; }
+.hoytile b { font-family: var(--font-body); }
+.hoyfila, .hoyfila.vencido, .hoyfila.sol { border: 0; border-radius: 18px; padding: 12px 14px; box-shadow: var(--shadow); gap: 5px; }
+.hoyfila .cuando {
+  align-self: flex-start;
+  font-size: .76rem;
+  font-weight: 600;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--s-prog-fg);
+}
+.hoyfila.vencido .cuando { background: var(--s-pend-bg); color: var(--s-pend-fg); }
+.hoyfila.sol .cuando { background: var(--s-curs-bg); color: var(--s-curs-fg); }
+
+/* Secciones en el computador: grupo en píldora y botón de nueva solicitud a la derecha. */
+.secciones { background: transparent; border-bottom: 0; }
+.secciones .band-inner { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding-block: 14px 0; }
+.secctoggle { background: var(--surface); border: 0; border-radius: 999px; padding: 4px; box-shadow: var(--shadow); }
+.secctoggle button { border-radius: 999px; border: 0; }
+.secctoggle button[aria-pressed="true"] { background: var(--accent); color: var(--accent-fg); }
+.tab-mas { display: none !important; }
+.tab-nueva {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-fg);
+  font-weight: 600;
+  padding: 10px 18px;
+  box-shadow: 0 10px 22px -10px rgba(45, 75, 240, .6);
+}
+.tab-nueva:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+.tab-nueva[hidden] { display: none; }
+.nuevacirc svg { width: 16px; height: 16px; display: block; fill: none; stroke: currentColor; stroke-width: 2.6; stroke-linecap: round; }
+.maspanel {
+  position: absolute;
+  right: 10px;
+  bottom: calc(100% + 10px);
+  min-width: 210px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  box-shadow: 0 18px 40px -16px rgba(15, 20, 48, .45);
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.maspanel button { border: 0; background: transparent; text-align: left; border-radius: 14px; padding: 12px 14px; font-size: .95rem; }
+.maspanel button:hover { background: var(--surface-2); }
+
+@media (max-width: 640px) {
+  .topbar { border-radius: 0 0 22px 22px; }
+  .secciones {
+    background: var(--surface);
+    border-top: 0;
+    border-radius: 24px 24px 0 0;
+    box-shadow: 0 -10px 26px -14px rgba(15, 20, 48, .35);
+  }
+  .secciones .band-inner {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    align-items: end;
+    gap: 0;
+    padding: 0 4px;
+  }
+  .secctoggle { display: contents; }
+  .secctoggle button { border-radius: 0; background: transparent; padding-bottom: 9px; }
+  .secctoggle button[aria-pressed="true"] { background: transparent; color: var(--accent); }
+  #tabHoy { order: 1; }
+  #tabMant { order: 2; }
+  .tab-nueva { order: 3; }
+  #tabSol { order: 4; }
+  .tab-mas { display: flex !important; order: 5; }
+  #tabAct, #tabFin { display: none; }
+  .tab-nueva {
+    margin: 0;
+    flex-direction: column;
+    gap: 3px;
+    background: transparent;
+    border: 0;
+    box-shadow: none;
+    color: var(--accent);
+    font-size: .66rem;
+    font-weight: 700;
+    padding: 0 2px 9px;
+    border-radius: 0;
+    min-width: 0;
+  }
+  .tab-nueva:hover { background: transparent; }
+  .nuevacirc {
+    width: 56px;
+    height: 56px;
+    margin-top: -26px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: var(--accent-fg);
+    border: 4px solid var(--bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 10px 22px -8px rgba(45, 75, 240, .7);
+  }
+  .nuevacirc svg { width: 24px; height: 24px; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; animation: none !important; }
 }
@@ -1854,7 +2134,14 @@ body.en-planes .periodoactivo { display: none !important; }
       <button type="button" id="tabSol" aria-pressed="false"><svg class="tabico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/></svg><span class="tablbl">Solicitudes</span> <span class="solcount" id="solCount" hidden></span></button>
       <button type="button" id="tabAct" aria-pressed="false"><svg class="tabico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7l8-4 8 4v10l-8 4-8-4z"/><path d="M4 7l8 4 8-4M12 11v10"/></svg><span class="tablbl">Activos</span></button>
       <button type="button" id="tabFin" aria-pressed="false"><svg class="tabico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg><span class="tablbl">Finanzas</span></button>
+      <button type="button" id="tabMas" class="tab-mas" aria-pressed="false" aria-expanded="false" aria-controls="masPanel"><svg class="tabico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h.01M12 12h.01M19 12h.01"/></svg><span class="tablbl">Más</span></button>
     </div>
+    <button type="button" id="tabNueva" class="tab-nueva" hidden><span class="nuevacirc" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span><span class="tablbl"><span class="tl-largo">Nueva solicitud</span><span class="tl-corto">Solicitud</span></span></button>
+  </div>
+  <div class="maspanel" id="masPanel" hidden>
+    <button type="button" id="masAct">Activos</button>
+    <button type="button" id="masFin">Finanzas</button>
+    <button type="button" id="masPlanes">Planes preventivos</button>
   </div>
 </nav>
 
@@ -2562,6 +2849,9 @@ body.en-planes .periodoactivo { display: none !important; }
     toast: document.getElementById("toast"),
     secciones: document.getElementById("secciones"),
     tabHoy: document.getElementById("tabHoy"),
+    tabNueva: document.getElementById("tabNueva"),
+    tabMas: document.getElementById("tabMas"),
+    masPanel: document.getElementById("masPanel"),
     fab: document.getElementById("fab"),
     btnPlanes: document.getElementById("btnPlanes"),
     planOverlay: document.getElementById("planOverlay"),
@@ -4331,6 +4621,7 @@ body.en-planes .periodoactivo { display: none !important; }
   document.addEventListener("keydown", function (ev) {
     if (ev.key !== "Escape") return;
     if (!el.visorOverlay.hidden) { cerrarVisor(); return; }
+    if (!el.masPanel.hidden) { abrirMas(false); return; }
     if (!el.planOverlay.hidden) { cerrarPlan(); return; }
     if (!el.finOverlay.hidden) { cerrarMovimiento(); return; }
     if (!el.actOverlay.hidden) { cerrarActivo(); return; }
@@ -5137,7 +5428,10 @@ body.en-planes .periodoactivo { display: none !important; }
     document.body.classList.toggle("en-hoy", state.seccion === "hoy");
     document.body.classList.toggle("en-planes", state.seccion === "planes");
     document.body.classList.toggle("modo-punto", state.perfil === "punto");
-    el.fab.hidden = !(state.perfil === "punto" || (state.perfil === "coordinador" && !soloLectura()));
+    /* El punto no tiene barra de secciones: usa el botón flotante. El coordinador, el de la barra. */
+    el.fab.hidden = state.perfil !== "punto";
+    el.tabNueva.hidden = !(state.perfil === "coordinador" && !soloLectura());
+    el.tabMas.setAttribute("aria-pressed", state.seccion === "activos" || state.seccion === "finanzas" ? "true" : "false");
     document.title = (state.perfil === "coordinador" && nuevas ? "(" + nuevas + ") " : "") + TITULO;
   }
 
@@ -5151,8 +5445,29 @@ body.en-planes .periodoactivo { display: none !important; }
   el.tabMant.addEventListener("click", function () { irASeccion("mantenimientos"); });
   el.btnPlanes.addEventListener("click", function () { abrirMenu(false); irASeccion("planes"); });
 
-  /* El botón flotante registra una solicitud nueva, también las que llegan por WhatsApp. */
+  /* El botón flotante y el central de la barra registran una solicitud nueva,
+     también las que llegan por WhatsApp. */
   el.fab.addEventListener("click", abrirSolicitud);
+  el.tabNueva.addEventListener("click", abrirSolicitud);
+
+  /* "Más", en la barra del teléfono: Activos, Finanzas y Planes. */
+  function abrirMas(abierto) {
+    el.masPanel.hidden = !abierto;
+    el.tabMas.setAttribute("aria-expanded", abierto ? "true" : "false");
+  }
+  el.tabMas.addEventListener("click", function (ev) {
+    ev.stopPropagation();
+    abrirMas(el.masPanel.hidden);
+  });
+  [["masAct", "activos"], ["masFin", "finanzas"], ["masPlanes", "planes"]].forEach(function (par) {
+    document.getElementById(par[0]).addEventListener("click", function () {
+      abrirMas(false);
+      irASeccion(par[1]);
+    });
+  });
+  document.addEventListener("click", function (ev) {
+    if (!el.masPanel.hidden && !el.masPanel.contains(ev.target)) abrirMas(false);
+  });
   el.tabSol.addEventListener("click", function () { irASeccion("solicitudes"); });
   el.tabAct.addEventListener("click", function () { irASeccion("activos"); });
   el.tabFin.addEventListener("click", function () { irASeccion("finanzas"); });
@@ -7202,6 +7517,48 @@ body.en-planes .periodoactivo { display: none !important; }
       return r.estado === "Completado" && enPuntoElegido(r) && Number(r.costoReal) > 0 && r.estadoPago !== "Pagado";
     });
     var totalPagar = porPagar.reduce(function (t, r) { return t + Number(r.costoReal); }, 0);
+
+    /* Tarjeta de planes: cuántos planes activos tienen su trabajo al día. */
+    var planesPunto = state.planes.filter(function (p) { return p.vigente && enPuntoElegido(p); });
+    if (planesPunto.length) {
+      var alDia = planesPunto.filter(function (p) {
+        var ab = abiertoDePlan(p);
+        return !ab || !ab.fechaProgramada || ab.fechaProgramada >= hoy;
+      }).length;
+      var pct = Math.round(alDia / planesPunto.length * 100);
+      var hero = document.createElement("div");
+      hero.className = "hoyhero";
+      var top = document.createElement("div");
+      top.className = "hh-top";
+      var chip = document.createElement("span");
+      chip.className = "hh-chip";
+      chip.textContent = "Planes preventivos";
+      top.appendChild(chip);
+      hero.appendChild(top);
+      var num = document.createElement("div");
+      num.className = "hh-num";
+      var nb = document.createElement("b");
+      nb.textContent = pct + " %";
+      var ns = document.createElement("span");
+      ns.textContent = alDia + " de " + planesPunto.length + " al día";
+      num.appendChild(nb);
+      num.appendChild(ns);
+      hero.appendChild(num);
+      var barra = document.createElement("div");
+      barra.className = "hh-bar";
+      barra.setAttribute("role", "img");
+      barra.setAttribute("aria-label", pct + " % de los planes al día");
+      var relleno = document.createElement("i");
+      relleno.style.width = pct + "%";
+      barra.appendChild(relleno);
+      hero.appendChild(barra);
+      var ver = document.createElement("button");
+      ver.type = "button";
+      ver.textContent = "Ver planes";
+      ver.addEventListener("click", function () { irASeccion("planes"); });
+      hero.appendChild(ver);
+      wrap.appendChild(hero);
+    }
 
     var tiles = document.createElement("div");
     tiles.className = "hoytiles";
