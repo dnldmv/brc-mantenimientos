@@ -1329,6 +1329,10 @@ body.modo-punto #btnCsv { display: none !important; }
   margin: 0;
 }
 .solguia { font-size: .86rem; color: var(--fg-muted); margin: 0 0 12px; max-width: 70ch; }
+/* Preventivos del punto, debajo de sus solicitudes. */
+.prevpunto { margin-top: 28px; }
+.prevtitulo { font-size: .95rem; font-weight: 600; margin: 16px 0 8px; color: var(--fg); }
+.prevcard.atrasado { border-color: var(--s-pend-fg); }
 .solfiltros { display: inline-flex; margin-bottom: 10px; }
 .solavisos {
   display: flex;
@@ -3312,6 +3316,11 @@ select { pointer-events: none; }
     try { localStorage.setItem(key, val); } catch (e) { /* sin almacenamiento */ }
   }
   function soloLectura() { return state.perfil === "consulta" || state.puedeEscribir === false; }
+  /* La gerencia solo consulta, salvo las solicitudes: esas sí puede registrarlas. */
+  function puedeSolicitar() {
+    return state.perfil === "punto" || state.perfil === "consulta" ||
+      (state.perfil === "coordinador" && !soloLectura());
+  }
 
   function dosDigitos(n) { return (n < 10 ? "0" : "") + n; }
   function hoyIso() {
@@ -5346,7 +5355,7 @@ select { pointer-events: none; }
       return;
     }
     el.menuRol.textContent = state.perfil === "consulta"
-      ? "Gerencia · solo consulta"
+      ? "Gerencia · consulta y solicitudes"
       : (soloLectura() ? "Coordinador · solo consulta" : "Coordinador");
     el.rolepill.hidden = true;
     el.btnClaves.hidden = state.perfil !== "coordinador";
@@ -5919,7 +5928,7 @@ select { pointer-events: none; }
     document.body.classList.toggle("modo-punto", state.perfil === "punto");
     /* El punto no tiene barra de secciones: usa el botón flotante. El coordinador, el de la barra. */
     el.fab.hidden = state.perfil !== "punto";
-    el.tabNueva.hidden = !(state.perfil === "coordinador" && !soloLectura());
+    el.tabNueva.hidden = state.perfil === "punto" || !puedeSolicitar();
     el.tabMas.setAttribute("aria-pressed", state.seccion === "activos" || state.seccion === "finanzas" ? "true" : "false");
     document.title = (state.perfil === "coordinador" && nuevas ? "(" + nuevas + ") " : "") + TITULO;
   }
@@ -5995,7 +6004,7 @@ select { pointer-events: none; }
       ? "Solicitudes de " + nombrePunto(state.miPunto)
       : "Solicitudes de los puntos";
     head.appendChild(h);
-    if (state.perfil === "punto" || state.perfil === "coordinador") {
+    if (puedeSolicitar()) {
       var nueva = document.createElement("button");
       nueva.type = "button";
       nueva.className = "primary";
@@ -6031,14 +6040,124 @@ select { pointer-events: none; }
         ? "Todavía no has enviado solicitudes. Usa \"Nueva solicitud\" cuando algo se dañe o necesite arreglo."
         : "No hay solicitudes con este filtro.";
       wrap.appendChild(vacio);
-      return wrap;
+    } else {
+      var grid = document.createElement("div");
+      grid.className = "cards";
+      lista.forEach(function (s) { grid.appendChild(tarjetaSolicitud(s)); });
+      wrap.appendChild(grid);
     }
 
-    var grid = document.createElement("div");
-    grid.className = "cards";
-    lista.forEach(function (s) { grid.appendChild(tarjetaSolicitud(s)); });
-    wrap.appendChild(grid);
+    if (state.perfil === "punto") wrap.appendChild(bloquePreventivosPunto());
     return wrap;
+  }
+
+  /* ---------- preventivos del punto ---------- */
+
+  /* El punto ve sus preventivos (los que vienen y los hechos) desde una función del servidor
+     que no entrega costos, pagos ni responsables. */
+  var prevPunto = { punto: null, lista: null, error: false };
+
+  function cargarPreventivosPunto() {
+    if (!sb || state.perfil !== "punto") return Promise.resolve();
+    var punto = state.miPunto;
+    return sb.rpc("preventivos_del_punto").then(function (res) {
+      if (res.error) throw res.error;
+      prevPunto = { punto: punto, lista: res.data || [], error: false };
+    }).catch(function () {
+      prevPunto = { punto: punto, lista: [], error: true };
+    }).then(render);
+  }
+
+  function tarjetaPreventivo(m) {
+    var card = document.createElement("article");
+    var hecho = m.estado === "Completado";
+    var atrasado = !hecho && m.fecha_programada && m.fecha_programada < hoyIso();
+    card.className = "card prevcard" + (atrasado ? " atrasado" : "");
+
+    var p = document.createElement("p");
+    p.className = "card-desc";
+    p.textContent = m.descripcion || "Mantenimiento preventivo";
+    card.appendChild(p);
+
+    var bs = document.createElement("div");
+    bs.className = "badges";
+    bs.appendChild(badge(m.estado, "st-" + String(m.estado || "").replace(/\s+/g, "")));
+    if (atrasado) bs.appendChild(badge("Atrasado", "st-Pendiente"));
+    if (m.categoria) bs.appendChild(badge(categoriaCorta(m.categoria), "neutral"));
+    card.appendChild(bs);
+
+    var dl = document.createElement("dl");
+    dl.className = "dl";
+    pareja(dl, "Programado", fecha(m.fecha_programada));
+    if (hecho) pareja(dl, "Realizado", fecha(m.fecha_realizada));
+    if (m.de_plan) pareja(dl, "Origen", "Plan preventivo", true);
+    card.appendChild(dl);
+    return card;
+  }
+
+  function bloquePreventivosPunto() {
+    var box = document.createElement("div");
+    box.className = "prevpunto";
+
+    var head = document.createElement("div");
+    head.className = "solhead";
+    var h = document.createElement("h2");
+    h.textContent = "Mantenimientos preventivos";
+    head.appendChild(h);
+    box.appendChild(head);
+
+    var guia = document.createElement("p");
+    guia.className = "solguia";
+    guia.textContent = "Los mantenimientos que el coordinador tiene programados para " +
+      nombrePunto(state.miPunto) + ", en qué estado van y los que ya se hicieron.";
+    box.appendChild(guia);
+
+    if (prevPunto.punto !== state.miPunto || prevPunto.lista === null) {
+      if (prevPunto.punto !== state.miPunto) {
+        prevPunto = { punto: state.miPunto, lista: null, error: false };
+        cargarPreventivosPunto();
+      }
+      var cargando = document.createElement("p");
+      cargando.className = "cat-empty";
+      cargando.textContent = "Cargando los mantenimientos del punto…";
+      box.appendChild(cargando);
+      return box;
+    }
+    if (prevPunto.error) {
+      var err = document.createElement("p");
+      err.className = "cat-empty";
+      err.textContent = "No se pudieron traer los mantenimientos. Revisa la conexión y vuelve a abrir la app.";
+      box.appendChild(err);
+      return box;
+    }
+
+    /* Los que vienen, del más próximo al más lejano; los hechos, del más reciente al más antiguo. */
+    var proximos = prevPunto.lista.filter(function (m) { return m.estado !== "Completado"; })
+      .sort(function (a, b) { return String(a.fecha_programada || "9999").localeCompare(String(b.fecha_programada || "9999")); });
+    var hechos = prevPunto.lista.filter(function (m) { return m.estado === "Completado"; })
+      .sort(function (a, b) {
+        return String(b.fecha_realizada || b.fecha_programada || "").localeCompare(String(a.fecha_realizada || a.fecha_programada || ""));
+      });
+
+    [["Programados", proximos, "No hay mantenimientos preventivos programados por ahora."],
+     ["Completados", hechos, "Todavía no hay mantenimientos preventivos completados."]].forEach(function (g) {
+      var t = document.createElement("h3");
+      t.className = "prevtitulo";
+      t.textContent = g[0] + " (" + g[1].length + ")";
+      box.appendChild(t);
+      if (!g[1].length) {
+        var v = document.createElement("p");
+        v.className = "cat-empty";
+        v.textContent = g[2];
+        box.appendChild(v);
+        return;
+      }
+      var grid = document.createElement("div");
+      grid.className = "cards";
+      g[1].forEach(function (m) { grid.appendChild(tarjetaPreventivo(m)); });
+      box.appendChild(grid);
+    });
+    return box;
   }
 
   function filtrosSolicitud() {
@@ -6293,6 +6412,7 @@ select { pointer-events: none; }
 
   function cargarSolicitudes() {
     if (!sb) return Promise.resolve();
+    if (state.perfil === "punto" && prevPunto.punto === state.miPunto) cargarPreventivosPunto();
     return sb.from("solicitudes").select("*").order("creado", { ascending: false }).then(function (res) {
       if (res.error) throw res.error;
       var primera = !state.solCargadas;
@@ -6318,8 +6438,10 @@ select { pointer-events: none; }
     el.solError.hidden = true;
     el.solPuntoWrap.hidden = esPunto;
     el.s.punto.value = esPunto ? state.miPunto : (state.punto !== "todos" ? state.punto : "");
-    el.s.reporta.value = esPunto ? (lee("brc.reporta") || "") : "";
-    el.s.cargo.value = esPunto ? (lee("brc.cargo") || "") : "";
+    /* El punto y la gerencia suelen reportar siempre las mismas personas: se recuerdan. */
+    var recuerda = esPunto || state.perfil === "consulta";
+    el.s.reporta.value = recuerda ? (lee("brc.reporta") || "") : "";
+    el.s.cargo.value = recuerda ? (lee("brc.cargo") || "") : "";
     el.s.categoria.value = "";
     el.s.urgencia.value = "Media";
     el.s.descripcion.value = "";
@@ -6428,7 +6550,7 @@ select { pointer-events: none; }
     el.solEnviar.disabled = true;
     el.solEnviar.textContent = solFotos.length ? "Subiendo fotos…" : "Enviando…";
     el.solError.hidden = true;
-    if (state.perfil === "punto") {
+    if (state.perfil === "punto" || state.perfil === "consulta") {
       guarda("brc.reporta", s.reporta.value.trim());
       guarda("brc.cargo", s.cargo.value.trim());
     }
