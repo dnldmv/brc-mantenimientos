@@ -289,12 +289,12 @@ body::before {
 .menupanel .viewtoggle button {
   width: auto;
   text-align: center;
-  border-radius: 0;
+  border-radius: 999px; /* misma forma de globo que el contenedor */
   padding: 6px 12px;
   font-size: .8rem;
   font-weight: 500;
 }
-.menupanel .viewtoggle button[aria-pressed="true"] { background: var(--surface-3); font-weight: 600; }
+.menupanel .viewtoggle button[aria-pressed="true"] { background: var(--accent); color: var(--accent-fg); font-weight: 600; }
 
 .filtrowrap { margin-left: 0; }
 .filtrocount {
