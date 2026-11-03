@@ -2036,6 +2036,58 @@ button.metric[aria-pressed="true"] { box-shadow: inset 0 0 0 2px var(--accent); 
   .nuevacirc svg { width: 24px; height: 24px; }
 }
 
+/* Encabezado compacto: logo, píldora del punto y botón de perfil, en una sola fila. */
+.topbar { position: sticky; top: env(safe-area-inset-top, 0px); }
+.topbar .band-inner.barra1 { display: flex; align-items: center; gap: 12px; padding-block: 10px; }
+.barra1 .brandlogo { height: 36px; align-self: center; }
+.barra1 .field-pick { flex: 0 1 auto; min-width: 0; max-width: 260px; margin-left: 4px; }
+.oculto { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.barra1 #selPunto {
+  appearance: none;
+  -webkit-appearance: none;
+  color-scheme: dark;
+  width: auto;
+  max-width: 100%;
+  font-size: .95rem;
+  padding: 8px 34px 8px 14px;
+  color: #FFFFFF;
+  background: rgba(255, 255, 255, .1) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23D7F25C' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") no-repeat right 12px center / 14px;
+  border: 1px solid rgba(255, 255, 255, .18);
+  text-overflow: ellipsis;
+}
+.barra1 #selPunto:hover { background-color: rgba(255, 255, 255, .16); }
+.barra1 #selPunto option { color: #FFFFFF; background: #141A36; }
+.barra1 .rolepill { border-color: rgba(255, 255, 255, .24); color: #FFFFFF; font-size: .85rem; padding: 6px 12px; }
+.barra1 .menuwrap { margin-left: auto; flex: none; }
+.avatarbtn {
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--zest);
+  color: #0F1430;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.avatarbtn:hover, .avatarbtn[aria-expanded="true"] { background: #E4F78A; box-shadow: 0 0 0 4px rgba(215, 242, 92, .25); }
+.avatarbtn svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+.topbar .avatarbtn:focus-visible { outline: 2px solid #FFFFFF; outline-offset: 3px; }
+.menurol { margin: 4px 11px 6px; font-size: .8rem; font-weight: 600; color: var(--fg-muted); }
+/* Filtros y periodo, ahora junto al buscador de Mantenimientos. */
+.controls #btnFiltros { padding-block: 8px; }
+.controls .filtrocount { background: var(--accent); color: var(--accent-fg); font-weight: 700; }
+.controls .periodoactivo { font-size: .85rem; padding-block: 6px; }
+@media (max-width: 640px) {
+  .topbar .band-inner.barra1 { gap: 8px; padding-block: 8px; }
+  .barra1 .brandlogo { height: 30px; }
+  .barra1 .field-pick { max-width: 190px; flex-basis: auto; }
+  .barra1 #selPunto { font-size: .9rem; padding: 7px 30px 7px 12px; }
+  .controls .band-inner { gap: 8px; }
+  .controls #q { flex-basis: 100%; order: -1; }
+}
+
 /* Portada de perfiles: fondo tinta, tres globos y el acceso que se despliega. */
 .gate.gate-perfiles { background: var(--ink); color: #FFFFFF; color-scheme: dark; }
 .gate-perfiles .gatebox { max-width: 760px; text-align: center; }
@@ -2144,69 +2196,35 @@ button.metric[aria-pressed="true"] { box-shadow: inset 0 0 0 2px var(--accent); 
 </div>
 
 <header class="topbar">
-  <div class="band-inner">
-    <div class="brandrow">
-      <img class="brandlogo" src="img/brc-logo-blanco.svg" alt="Buffalo Ribs Company" width="819" height="236">
-      <div class="brandright">
-        <span class="brand-sub">Mantenimientos y proyectos</span>
-        <span class="rolepill" id="rolepill" hidden></span>
-      </div>
+  <div class="band-inner barra1">
+    <img class="brandlogo" src="img/brc-logo-blanco.svg" alt="Buffalo Ribs Company · Mantenimientos" width="819" height="236">
+    <div class="field-pick">
+      <label for="selPunto" class="oculto">Punto de venta</label>
+      <select id="selPunto"></select>
     </div>
-    <div class="pointrow">
-      <div class="field-pick">
-        <label for="selPunto">Punto de venta</label>
-        <select id="selPunto"></select>
-      </div>
-      <div class="menuwrap filtrowrap">
-        <button class="chip menubtn" id="btnFiltros" aria-expanded="false" aria-haspopup="true" aria-controls="filtrosPanel">
-          <span class="filtrolargo">Elegir filtros y/o periodos</span><span class="filtrocorto">Filtros</span><span class="filtrocount" id="filtroCount" hidden></span> <span class="caret" aria-hidden="true">▾</span>
-        </button>
-        <div class="menupanel filtrospanel" id="filtrosPanel" hidden>
-          <div class="chips" id="chipsEstado"></div>
-          <div class="chips" id="chipsPago"></div>
-          <div class="menusep"></div>
-          <div class="chips" id="rangoMes" hidden>
-            <span class="chiplabel">Periodo</span>
-            <select class="mesinput" id="mesDesde" aria-label="Mes"></select>
-            <span id="rangoHasta" hidden>
-              <span class="messep">a</span>
-              <select class="mesinput" id="mesHasta" aria-label="Hasta el mes"></select>
-            </span>
-            <button class="chip" type="button" id="mesVarios" aria-pressed="false">Varios meses</button>
-            <button class="chip" type="button" id="mesLimpiar">Todo</button>
+    <span class="rolepill" id="rolepill" hidden></span>
+    <div class="menuwrap">
+      <button class="menubtn avatarbtn" id="btnMenu" aria-label="Opciones" aria-expanded="false" aria-haspopup="true" aria-controls="menuPanel">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8.5" r="3.8"/><path d="M4.5 20c1.3-3.7 4.1-5.5 7.5-5.5s6.2 1.8 7.5 5.5"/></svg>
+      </button>
+      <div class="menupanel" id="menuPanel" hidden role="menu">
+        <p class="menurol" id="menuRol"></p>
+        <button type="button" class="destacado" id="btnNuevo" role="menuitem">Registrar mantenimiento</button>
+        <button type="button" id="btnPlanes" role="menuitem">Planes preventivos</button>
+        <button type="button" id="btnPlantilla" role="menuitem">Cargar plantilla preventiva</button>
+        <button type="button" id="btnCsv" role="menuitem">Descargar CSV</button>
+        <div class="menusep"></div>
+        <div class="menutema">
+          <span class="chiplabel">Tema</span>
+          <div class="viewtoggle" role="group" aria-label="Tema de la página">
+            <button type="button" id="temaClaro" aria-pressed="false">Claro</button>
+            <button type="button" id="temaOscuro" aria-pressed="false">Oscuro</button>
+            <button type="button" id="temaSistema" aria-pressed="true">Sistema</button>
           </div>
-          <div class="menusep"></div>
-          <div class="chips" id="ordenFila">
-            <span class="chiplabel">Ordenar por</span>
-            <select class="mesinput" id="selOrden" aria-label="Ordenar los mantenimientos por"></select>
-          </div>
-          <div class="menusep"></div>
-          <button type="button" id="btnLimpiarChips">Limpiar estado y pago</button>
         </div>
-      </div>
-      <span class="periodoactivo" id="periodoActivo"></span>
-      <div class="menuwrap">
-        <button class="ghost-light menubtn" id="btnMenu" aria-expanded="false" aria-haspopup="true" aria-controls="menuPanel">
-          Opciones <span class="caret" aria-hidden="true">▾</span>
-        </button>
-        <div class="menupanel" id="menuPanel" hidden role="menu">
-          <button type="button" class="destacado" id="btnNuevo" role="menuitem">Registrar mantenimiento</button>
-          <button type="button" id="btnPlanes" role="menuitem">Planes preventivos</button>
-          <button type="button" id="btnPlantilla" role="menuitem">Cargar plantilla preventiva</button>
-          <button type="button" id="btnCsv" role="menuitem">Descargar CSV</button>
-          <div class="menusep"></div>
-          <div class="menutema">
-            <span class="chiplabel">Tema</span>
-            <div class="viewtoggle" role="group" aria-label="Tema de la página">
-              <button type="button" id="temaClaro" aria-pressed="false">Claro</button>
-              <button type="button" id="temaOscuro" aria-pressed="false">Oscuro</button>
-              <button type="button" id="temaSistema" aria-pressed="true">Sistema</button>
-            </div>
-          </div>
-          <div class="menusep"></div>
-          <button type="button" id="btnClaves" role="menuitem" hidden>Cambiar mi contraseña</button>
-          <button type="button" id="btnSalir" role="menuitem">Salir</button>
-        </div>
+        <div class="menusep"></div>
+        <button type="button" id="btnClaves" role="menuitem" hidden>Cambiar mi contraseña</button>
+        <button type="button" id="btnSalir" role="menuitem">Salir</button>
       </div>
     </div>
   </div>
@@ -2245,6 +2263,34 @@ button.metric[aria-pressed="true"] { box-shadow: inset 0 0 0 2px var(--accent); 
 
 <section class="controls">
   <div class="band-inner">
+    <div class="menuwrap filtrowrap">
+      <button class="chip menubtn" id="btnFiltros" aria-expanded="false" aria-haspopup="true" aria-controls="filtrosPanel">
+        <span class="filtrolargo">Elegir filtros y/o periodos</span><span class="filtrocorto">Filtros</span><span class="filtrocount" id="filtroCount" hidden></span> <span class="caret" aria-hidden="true">▾</span>
+      </button>
+      <div class="menupanel filtrospanel" id="filtrosPanel" hidden>
+        <div class="chips" id="chipsEstado"></div>
+        <div class="chips" id="chipsPago"></div>
+        <div class="menusep"></div>
+        <div class="chips" id="rangoMes" hidden>
+          <span class="chiplabel">Periodo</span>
+          <select class="mesinput" id="mesDesde" aria-label="Mes"></select>
+          <span id="rangoHasta" hidden>
+            <span class="messep">a</span>
+            <select class="mesinput" id="mesHasta" aria-label="Hasta el mes"></select>
+          </span>
+          <button class="chip" type="button" id="mesVarios" aria-pressed="false">Varios meses</button>
+          <button class="chip" type="button" id="mesLimpiar">Todo</button>
+        </div>
+        <div class="menusep"></div>
+        <div class="chips" id="ordenFila">
+          <span class="chiplabel">Ordenar por</span>
+          <select class="mesinput" id="selOrden" aria-label="Ordenar los mantenimientos por"></select>
+        </div>
+        <div class="menusep"></div>
+        <button type="button" id="btnLimpiarChips">Limpiar estado y pago</button>
+      </div>
+    </div>
+    <span class="periodoactivo" id="periodoActivo"></span>
     <input id="q" type="search" placeholder="Buscar aquí" aria-label="Buscar descripción, proveedor u observación">
     <div class="viewtoggle" role="group" aria-label="Forma de ver los mantenimientos">
       <button id="vTarjetas" aria-pressed="true">Tarjetas</button>
@@ -2908,6 +2954,7 @@ button.metric[aria-pressed="true"] { box-shadow: inset 0 0 0 2px var(--accent); 
     sheetTitle: document.getElementById("sheetTitle"),
     formError: document.getElementById("formError"),
     rolepill: document.getElementById("rolepill"),
+    menuRol: document.getElementById("menuRol"),
     gate: document.getElementById("gate"),
     gateBody: document.getElementById("gateBody"),
     btnSalir: document.getElementById("btnSalir"),
@@ -5008,15 +5055,17 @@ button.metric[aria-pressed="true"] { box-shadow: inset 0 0 0 2px var(--accent); 
       return;
     }
     if (state.perfil === "punto") {
-      el.rolepill.textContent = nombrePunto(state.miPunto) + " · Punto de venta";
+      /* El punto no elige punto: en el encabezado se ve el suyo. */
+      el.rolepill.textContent = nombrePunto(state.miPunto);
       el.rolepill.hidden = false;
+      el.menuRol.textContent = nombrePunto(state.miPunto) + " · Punto de venta";
       el.btnClaves.hidden = true;
       return;
     }
-    el.rolepill.textContent = state.perfil === "consulta"
+    el.menuRol.textContent = state.perfil === "consulta"
       ? "Gerencia · solo consulta"
       : (soloLectura() ? "Coordinador · solo consulta" : "Coordinador");
-    el.rolepill.hidden = false;
+    el.rolepill.hidden = true;
     el.btnClaves.hidden = state.perfil !== "coordinador";
   }
 
