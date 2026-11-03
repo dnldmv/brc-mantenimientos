@@ -1230,6 +1230,8 @@ tr:last-child td { border-bottom: 0; }
 }
 .visormarco { flex: 1 1 auto; width: 100%; border: 0; background: #ffffff; min-height: 320px; }
 .visorimg { margin: auto; max-width: 100%; display: block; }
+.visorpdf { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 12px; }
+.visorpag { display: block; max-width: 100%; height: auto; background: #ffffff; border-radius: 4px; box-shadow: 0 2px 10px -4px rgba(0, 0, 0, .35); }
 .visormsg {
   margin: auto;
   padding: 22px 18px;
@@ -3752,26 +3754,101 @@ select { pointer-events: none; }
         return;
       }
 
-      var marco = document.createElement("iframe");
-      marco.className = "visormarco";
-      marco.title = sop.nombre || "Soporte";
-      marco.src = visorUrl;
-      el.visorCuerpo.appendChild(marco);
-
-      var aviso = document.createElement("p");
-      aviso.className = "visoraviso";
-      aviso.hidden = true;
-      aviso.textContent = "Tu navegador no muestra el PDF aquí. Usa Descargar para abrirlo.";
-      el.visorCuerpo.appendChild(aviso);
-
-      var cargo = false;
-      marco.addEventListener("load", function () { cargo = true; });
-      setTimeout(function () {
-        if (!cargo && visorSop === sop) aviso.hidden = false;
-      }, 2500);
+      /* Si el lector propio falla, queda el visor del navegador. */
+      mensajeVisor("Preparando la vista previa…");
+      mostrarPdf(blob, sop).catch(function () {
+        if (visorSop !== sop) return;
+        el.visorCuerpo.textContent = "";
+        marcoNavegador(sop);
+      });
     }).catch(function () {
       if (visorSop !== sop) return;
       mensajeVisor("No se pudo traer el archivo. Vuelve a intentarlo.");
+    });
+  }
+
+  function marcoNavegador(sop) {
+    var marco = document.createElement("iframe");
+    marco.className = "visormarco";
+    marco.title = sop.nombre || "Soporte";
+    marco.src = visorUrl;
+    el.visorCuerpo.appendChild(marco);
+
+    var aviso = document.createElement("p");
+    aviso.className = "visoraviso";
+    aviso.hidden = true;
+    aviso.textContent = "Tu navegador no muestra el PDF aquí. Usa Descargar para abrirlo.";
+    el.visorCuerpo.appendChild(aviso);
+
+    var cargo = false;
+    marco.addEventListener("load", function () { cargo = true; });
+    setTimeout(function () {
+      if (!cargo && visorSop === sop) aviso.hidden = false;
+    }, 2500);
+  }
+
+  /* Lector de PDF propio (pdf.js): en los teléfonos el visor del navegador no se muestra
+     dentro de la app. Se carga la primera vez que se abre un PDF; la huella (integrity)
+     impide usar el archivo si alguien lo cambiara en el servidor de origen. */
+  var PDFJS = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/";
+  var pdfjsCarga = null;
+
+  function cargarPdfJs() {
+    if (window.pdfjsLib) return Promise.resolve(window.pdfjsLib);
+    if (!pdfjsCarga) {
+      pdfjsCarga = new Promise(function (listo, falla) {
+        var s = document.createElement("script");
+        s.src = PDFJS + "pdf.min.js";
+        s.integrity = "sha384-/1qUCSGwTur9vjf/z9lmu/eCUYbpOTgSjmpbMQZ1/CtX2v/WcAIKqRv+U1DUCG6e";
+        s.crossOrigin = "anonymous";
+        s.onload = function () {
+          if (!window.pdfjsLib) { falla(new Error("pdf.js")); return; }
+          window.pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS + "pdf.worker.min.js";
+          listo(window.pdfjsLib);
+        };
+        s.onerror = function () {
+          pdfjsCarga = null;
+          falla(new Error("pdf.js"));
+        };
+        document.head.appendChild(s);
+      });
+    }
+    return pdfjsCarga;
+  }
+
+  /* Dibuja las páginas una debajo de otra, al ancho del visor y nítidas en pantallas de alta densidad. */
+  function mostrarPdf(blob, sop) {
+    return Promise.all([cargarPdfJs(), blob.arrayBuffer()]).then(function (r) {
+      return r[0].getDocument({ data: new Uint8Array(r[1]) }).promise;
+    }).then(function (doc) {
+      if (visorSop !== sop) return;
+      el.visorCuerpo.textContent = "";
+      var hojas = document.createElement("div");
+      hojas.className = "visorpdf";
+      el.visorCuerpo.appendChild(hojas);
+      var ancho = Math.max(260, Math.min(hojas.clientWidth - 24, 900));
+      var densidad = Math.min(window.devicePixelRatio || 1, 2);
+      var cadena = Promise.resolve();
+      for (var n = 1; n <= doc.numPages; n++) {
+        cadena = cadena.then(dibujarPagina.bind(null, doc, n, hojas, ancho, densidad, sop));
+      }
+      return cadena;
+    });
+  }
+
+  function dibujarPagina(doc, num, hojas, ancho, densidad, sop) {
+    if (visorSop !== sop) return null;
+    return doc.getPage(num).then(function (pag) {
+      var base = pag.getViewport({ scale: 1 });
+      var vista = pag.getViewport({ scale: (ancho / base.width) * densidad });
+      var c = document.createElement("canvas");
+      c.className = "visorpag";
+      c.width = Math.floor(vista.width);
+      c.height = Math.floor(vista.height);
+      c.style.width = Math.floor(vista.width / densidad) + "px";
+      c.setAttribute("aria-label", "Página " + num + " de " + doc.numPages);
+      hojas.appendChild(c);
+      return pag.render({ canvasContext: c.getContext("2d"), viewport: vista }).promise;
     });
   }
 
