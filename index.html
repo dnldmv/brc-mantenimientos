@@ -1781,6 +1781,12 @@ body.en-planes .periodoactivo { display: none !important; }
   --accent-soft: #E6EBFF;
   --zest: #D7F25C;
   --ink: #0F1430;
+  --carga-fondo: var(--bg);
+  --carga-texto: var(--fg);
+  --carga-suave: var(--fg-muted);
+  --carga-acento: var(--accent);
+  --carga-logo-claro: block;
+  --carga-logo-oscuro: none;
 
   --s-pend-bg: #FFE4E2;  --s-pend-fg: #B42318;
   --s-prog-bg: #E6EBFF;  --s-prog-fg: #2D4BF0;
@@ -1813,6 +1819,12 @@ body.en-planes .periodoactivo { display: none !important; }
     --accent-fg: #0A0E22;
     --accent-soft: #1F2A63;
     --ink: #050816;
+    --carga-fondo: var(--ink);
+    --carga-texto: #FFFFFF;
+    --carga-suave: #B7BDD9;
+    --carga-acento: var(--zest);
+    --carga-logo-claro: none;
+    --carga-logo-oscuro: block;
     --s-pend-bg: #3D1A1F;  --s-pend-fg: #FFA9A0;
     --s-prog-bg: #1F2A63;  --s-prog-fg: #B3C2FF;
     --s-curs-bg: #3A2C0D;  --s-curs-fg: #F0C477;
@@ -1837,6 +1849,12 @@ body.en-planes .periodoactivo { display: none !important; }
   --accent-fg: #0A0E22;
   --accent-soft: #1F2A63;
   --ink: #050816;
+  --carga-fondo: var(--ink);
+  --carga-texto: #FFFFFF;
+  --carga-suave: #B7BDD9;
+  --carga-acento: var(--zest);
+  --carga-logo-claro: none;
+  --carga-logo-oscuro: block;
   --s-pend-bg: #3D1A1F;  --s-pend-fg: #FFA9A0;
   --s-prog-bg: #1F2A63;  --s-prog-fg: #B3C2FF;
   --s-curs-bg: #3A2C0D;  --s-curs-fg: #F0C477;
@@ -2214,9 +2232,19 @@ body { font-variant-numeric: tabular-nums; }
 .gate-perfiles .gatenote { color: #9AA1C4; text-align: center; max-width: 52ch; margin-left: auto; margin-right: auto; }
 /* Con la portada a la vista, el hueco de la barra de desplazamiento también va oscuro. */
 html:has(.gate.gate-perfiles:not([hidden])) { background: var(--ink); }
+/* Pantalla de carga: sigue el tema (fondo claro de la app en claro, el oscuro de la portada en oscuro).
+   Los valores de cada tema están en los --carga-* de los bloques de colores. */
+.gatebrand .logo-claro { display: none; }
+.gate-cargando .gatebrand .logo-claro { display: var(--carga-logo-claro); }
+.gate-cargando .gatebrand .logo-oscuro { display: var(--carga-logo-oscuro); }
+.gate.gate-perfiles.gate-cargando { background: var(--carga-fondo); color: var(--carga-texto); color-scheme: normal; }
+.gate-perfiles.gate-cargando .gateh2 { color: var(--carga-texto); }
+.gate-perfiles.gate-cargando .gatep { color: var(--carga-suave); }
+.gate-perfiles.gate-cargando .brand-sub { color: var(--carga-texto); border-bottom-color: var(--carga-acento); }
+html:has(.gate.gate-cargando:not([hidden])) { background: var(--carga-fondo); }
 /* Tres puntos que laten mientras se comprueba el acceso. */
 .gatecarga { display: flex; justify-content: center; gap: 10px; margin-top: 4px; }
-.gatecarga span { width: 12px; height: 12px; border-radius: 50%; background: var(--zest); animation: latido 1s ease-in-out infinite; }
+.gatecarga span { width: 12px; height: 12px; border-radius: 50%; background: var(--carga-acento); animation: latido 1s ease-in-out infinite; }
 .gatecarga span:nth-child(2) { animation-delay: .15s; }
 .gatecarga span:nth-child(3) { animation-delay: .3s; }
 @keyframes latido { 0%, 80%, 100% { opacity: .25; transform: scale(.7); } 40% { opacity: 1; transform: scale(1); } }
@@ -2273,10 +2301,11 @@ select { pointer-events: none; }
 <body>
 
 
-<div class="gate gate-perfiles" id="gate">
+<div class="gate gate-perfiles gate-cargando" id="gate">
   <div class="gatebox">
     <div class="gatebrand">
-      <img class="brandlogo" src="img/brc-logo-blanco.svg" alt="Buffalo Ribs Company" width="819" height="236">
+      <img class="brandlogo logo-oscuro" src="img/brc-logo-blanco.svg" alt="Buffalo Ribs Company" width="819" height="236">
+      <img class="brandlogo logo-claro" src="img/brc-logo-color.svg" alt="Buffalo Ribs Company" width="819" height="236">
       <span class="brand-sub">Mantenimientos y proyectos</span>
     </div>
     <div id="gateBody">
@@ -5435,6 +5464,7 @@ select { pointer-events: none; }
   /* Todas las pantallas de la portada comparten el fondo oscuro de la elección de perfil. */
   function mensajePortada(titulo, texto, cargando) {
     el.gate.classList.add("gate-perfiles");
+    el.gate.classList.toggle("gate-cargando", !!cargando);
     el.gateBody.textContent = "";
     var h = document.createElement("h2");
     h.className = "gateh2";
