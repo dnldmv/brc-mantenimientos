@@ -5028,21 +5028,69 @@ select { pointer-events: none; }
   el.overlay.addEventListener("click", function (ev) {
     if (ev.target === el.overlay) cerrarForm();
   });
+  /* Cierra la ventana o el menú que esté encima; dice si había alguno. */
+  function cerrarCapaSuperior() {
+    if (!el.visorOverlay.hidden) { cerrarVisor(); return true; }
+    if (!el.masPanel.hidden) { abrirMas(false); return true; }
+    if (!el.planOverlay.hidden) { cerrarPlan(); return true; }
+    if (!el.finOverlay.hidden) { cerrarMovimiento(); return true; }
+    if (!el.actOverlay.hidden) { cerrarActivo(); return true; }
+    if (!el.progOverlay.hidden) { cerrarProgramar(); return true; }
+    if (!el.solOverlay.hidden) { cerrarSolicitud(); return true; }
+    if (!el.filtrosPanel.hidden) { abrirFiltros(false); return true; }
+    if (!el.menuPanel.hidden) { abrirMenu(false); return true; }
+    if (!el.fichaOverlay.hidden) { cerrarFicha(); return true; }
+    if (!el.overlay.hidden) { cerrarForm(); return true; }
+    if (!el.hojaOverlay.hidden) { cerrarHoja(); return true; }
+    return false;
+  }
+
   document.addEventListener("keydown", function (ev) {
-    if (ev.key !== "Escape") return;
-    if (!el.visorOverlay.hidden) { cerrarVisor(); return; }
-    if (!el.masPanel.hidden) { abrirMas(false); return; }
-    if (!el.planOverlay.hidden) { cerrarPlan(); return; }
-    if (!el.finOverlay.hidden) { cerrarMovimiento(); return; }
-    if (!el.actOverlay.hidden) { cerrarActivo(); return; }
-    if (!el.progOverlay.hidden) { cerrarProgramar(); return; }
-    if (!el.solOverlay.hidden) { cerrarSolicitud(); return; }
-    if (!el.filtrosPanel.hidden) { abrirFiltros(false); return; }
-    if (!el.menuPanel.hidden) { abrirMenu(false); return; }
-    if (!el.fichaOverlay.hidden) { cerrarFicha(); return; }
-    if (!el.overlay.hidden) { cerrarForm(); return; }
-    if (!el.hojaOverlay.hidden) cerrarHoja();
+    if (ev.key === "Escape") cerrarCapaSuperior();
   });
+
+  /* ---------- botón o gesto "atrás" del teléfono ---------- */
+
+  /* Sin esto, "atrás" cierra la app. Se deja una entrada de guarda en el historial: al volver,
+     se cierra lo que esté abierto o se regresa a la sección anterior, y la guarda se repone.
+     Si no hay nada que cerrar ni a dónde volver, el siguiente "atrás" sale de la app. */
+  var historialSecciones = [];
+  var guardaPuesta = false;
+  var avisoSalir = false;
+
+  function ponerGuarda() {
+    if (guardaPuesta || !window.history || !history.pushState) return;
+    history.pushState({ brcGuarda: true }, "");
+    guardaPuesta = true;
+  }
+
+  window.addEventListener("popstate", function () {
+    guardaPuesta = false;
+    var hizo = true;
+    if (desp.lista) cerrarDesplegable(false);
+    else if (cerrarCapaSuperior()) { /* cerrada */ }
+    else if (!el.gate.hidden && state.perfil) el.gate.hidden = true; /* "Cambiar mi contraseña" */
+    else if (el.gate.hidden && historialSecciones.length) {
+      state.seccion = historialSecciones.pop();
+      state.confirmar = null;
+      render();
+      window.scrollTo({ top: 0 });
+    } else hizo = false;
+
+    if (hizo) {
+      avisoSalir = false;
+      ponerGuarda();
+    } else if (!avisoSalir) {
+      avisoSalir = true;
+      toast("Desliza otra vez hacia atrás para salir.");
+    }
+  });
+
+  /* La guarda se pone con un toque: Chrome se salta las entradas agregadas sin que el usuario toque. */
+  document.addEventListener("pointerdown", function () {
+    avisoSalir = false;
+    ponerGuarda();
+  }, true);
 
   el.form.addEventListener("submit", function (ev) {
     ev.preventDefault();
@@ -5664,6 +5712,7 @@ select { pointer-events: none; }
   /* Portada al estilo de "¿Quién está viendo?": tres globos y, al tocar uno,
      se despliegan la contraseña y, para el punto de venta, cuál punto. */
   function portadaIngreso(errorInicial) {
+    historialSecciones = [];
     var c = mensajePortada("¿Quién va a entrar?", "Toca tu perfil para continuar.");
     el.gate.classList.add("gate-perfiles");
 
@@ -5934,6 +5983,11 @@ select { pointer-events: none; }
   }
 
   function irASeccion(s) {
+    /* Para que "atrás" regrese a la sección anterior. */
+    if (s !== state.seccion) {
+      historialSecciones.push(state.seccion);
+      if (historialSecciones.length > 30) historialSecciones.shift();
+    }
     state.seccion = s;
     state.confirmar = null;
     render();
