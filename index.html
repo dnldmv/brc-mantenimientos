@@ -1787,6 +1787,8 @@ body.en-planes .periodoactivo { display: none !important; }
 
   --font-display: "Outfit", "Segoe UI", system-ui, sans-serif;
   --font-body: "Outfit", "Segoe UI", system-ui, sans-serif;
+  /* Cifras y fechas en la misma letra, con números de ancho fijo para que las columnas cuadren. */
+  --font-mono: "Outfit", "Segoe UI", system-ui, sans-serif;
   --radius: 14px;
   --radius-lg: 22px;
   --shadow: 0 1px 2px rgba(15, 20, 48, .04), 0 10px 28px -14px rgba(45, 75, 240, .22);
@@ -2086,6 +2088,43 @@ button.metric[aria-pressed="true"] { box-shadow: inset 0 0 0 2px var(--accent); 
   .barra1 #selPunto { font-size: .9rem; padding: 7px 30px 7px 12px; }
   .controls .band-inner { gap: 8px; }
   .controls #q { flex-basis: 100%; order: -1; }
+}
+
+/* ---------- Ajustes de alineación ---------- */
+/* La barra de desplazamiento deja su espacio siempre: el contenido no salta al cambiar de sección. */
+html { scrollbar-gutter: stable; }
+body { font-variant-numeric: tabular-nums; }
+.metric-v.money { font-size: 1.15rem; font-weight: 700; padding-block: 2px 0; }
+/* Estado del coordinador en una tarjeta, con sus campos alineados. */
+.estadobar .band-inner { padding-block: 12px 0; }
+.estadobar .estadoblk {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 10px 14px;
+  box-shadow: var(--shadow);
+}
+.estadogrupo { gap: 6px 8px; }
+.estadosel { border-radius: 12px; padding: 7px 10px; }
+.estadotime { margin-left: auto; }
+/* Las tablas de Finanzas se desplazan dentro de su caja en lugar de salirse. */
+.fintabla { display: block; max-width: 100%; overflow-x: auto; }
+@media (max-width: 640px) {
+  .estadoblk { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: end; gap: 10px 12px; }
+  .estadogrupo { display: flex; flex-wrap: wrap; align-items: center; }
+  .estadogrupo:first-child { grid-column: 1 / -1; }
+  .estadogrupo .estadosel { flex: 1 1 100%; width: 100%; }
+  .estadotime { margin-left: 0; text-align: right; align-self: center; }
+  .hoyhead h2 { font-size: 1.5rem; }
+  .hoyacciones { display: grid; grid-template-columns: 1fr 1fr; }
+  .hoyacciones button { padding-block: 10px; }
+  .hoyacciones button.primary { grid-column: 1 / -1; order: -1; }
+  .controls .viewtoggle { margin-left: auto; }
+  .controls .viewtoggle button { padding: 6px 8px; }
+  .estadotime { align-self: end; padding-bottom: 9px; font-size: .72rem; }
+  .controls .statusline { flex-basis: 100%; text-align: left; margin-left: 0; }
+  .actfiltros select { width: 100%; }
+  .solhead > button { flex: 0 0 auto; }
 }
 
 /* Portada de perfiles: fondo tinta, tres globos y el acceso que se despliega. */
@@ -7916,9 +7955,10 @@ button.metric[aria-pressed="true"] { box-shadow: inset 0 0 0 2px var(--accent); 
     var abierto = abiertoDePlan(p);
     var prox = abierto && abierto.fechaProgramada ? abierto.fechaProgramada : p.proxima;
     var vencido = !!abierto && prox < hoyIso();
+    if (vencido) bs.appendChild(badge("Vencido", "st-Pendiente"));
     var dl = document.createElement("dl");
     dl.className = "dl";
-    pareja(dl, "Próximo", vencido ? fecha(prox) + " · vencido" : fecha(prox));
+    pareja(dl, "Próximo", fecha(prox));
     pareja(dl, "Responsable", p.responsable || "—", true);
     pareja(dl, "Costo estimado", cop(p.costo_estimado));
     var hechos = state.registros.filter(function (r) { return r.planId === p.id && r.estado === "Completado"; }).length;
