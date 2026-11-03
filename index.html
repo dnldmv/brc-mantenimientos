@@ -5963,7 +5963,7 @@ body { font-variant-numeric: tabular-nums; }
   /* En los teléfonos la notificación solo se puede mostrar a través del trabajador del navegador. */
   function avisarSistema(titulo, cuerpo, etiqueta) {
     if (!("Notification" in window) || Notification.permission !== "granted") return;
-    var opciones = { body: cuerpo, tag: etiqueta, icon: "img/brc-logo-color.svg" };
+    var opciones = { body: cuerpo, tag: etiqueta, icon: "img/aviso-icono.png", badge: "img/aviso-barra.png" };
     function directo() {
       try { new Notification(titulo, opciones); } catch (e) { /* el navegador no la admite */ }
     }
