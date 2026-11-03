@@ -2682,8 +2682,12 @@ body { font-variant-numeric: tabular-nums; }
         <select id="sPunto"></select>
       </div>
       <div class="f">
-        <label for="sReporta">¿Quién reporta?</label>
-        <input id="sReporta" autocomplete="name" maxlength="120" placeholder="Nombre y cargo">
+        <label for="sReporta">Nombre de quien reporta</label>
+        <input id="sReporta" autocomplete="name" maxlength="120" placeholder="Ej. Ana Pérez">
+      </div>
+      <div class="f">
+        <label for="sCargo">Cargo</label>
+        <input id="sCargo" autocomplete="organization-title" maxlength="80" placeholder="Ej. Administradora del punto">
       </div>
       <div class="f">
         <label for="sCategoria">¿De qué se trata?</label>
@@ -3070,6 +3074,7 @@ body { font-variant-numeric: tabular-nums; }
     s: {
       punto: document.getElementById("sPunto"),
       reporta: document.getElementById("sReporta"),
+      cargo: document.getElementById("sCargo"),
       categoria: document.getElementById("sCategoria"),
       urgencia: document.getElementById("sUrgencia"),
       descripcion: document.getElementById("sDescripcion"),
@@ -5820,6 +5825,11 @@ body { font-variant-numeric: tabular-nums; }
     return b;
   }
 
+  /* Nombre y cargo de quien reportó; las solicitudes viejas solo tienen el nombre. */
+  function quienReporta(s) {
+    return [s.reportado_por, s.cargo_reporta].filter(Boolean).join(" · ");
+  }
+
   function tarjetaSolicitud(s) {
     var card = document.createElement("article");
     card.className = "card sev-" + (s.prioridad || s.urgencia || "Media");
@@ -5840,7 +5850,7 @@ body { font-variant-numeric: tabular-nums; }
     var dl = document.createElement("dl");
     dl.className = "dl";
     if (state.perfil !== "punto") pareja(dl, "Punto", nombrePunto(s.punto), true);
-    pareja(dl, "Reportó", s.reportado_por || "—", true);
+    pareja(dl, "Reportó", quienReporta(s) || "—", true);
     pareja(dl, "Enviada", fechaHora(s.creado) || "—");
     if (s.fecha_programada) pareja(dl, "Programada", fecha(s.fecha_programada));
     if (s.prioridad) pareja(dl, "Prioridad", s.prioridad, true);
@@ -6044,6 +6054,7 @@ body { font-variant-numeric: tabular-nums; }
     el.solPuntoWrap.hidden = esPunto;
     el.s.punto.value = esPunto ? state.miPunto : (state.punto !== "todos" ? state.punto : "");
     el.s.reporta.value = esPunto ? (lee("brc.reporta") || "") : "";
+    el.s.cargo.value = esPunto ? (lee("brc.cargo") || "") : "";
     el.s.categoria.value = "";
     el.s.urgencia.value = "Media";
     el.s.descripcion.value = "";
@@ -6139,7 +6150,8 @@ body { font-variant-numeric: tabular-nums; }
     var punto = state.perfil === "punto" ? state.miPunto : s.punto.value;
     var faltan = [];
     if (!punto) faltan.push("el punto de venta");
-    if (!s.reporta.value.trim()) faltan.push("quién reporta");
+    if (!s.reporta.value.trim()) faltan.push("el nombre de quien reporta");
+    if (!s.cargo.value.trim()) faltan.push("su cargo");
     if (!s.descripcion.value.trim()) faltan.push("la descripción del problema");
     if (faltan.length) {
       el.solError.textContent = "Falta " + faltan.join(", ") + ".";
@@ -6151,13 +6163,17 @@ body { font-variant-numeric: tabular-nums; }
     el.solEnviar.disabled = true;
     el.solEnviar.textContent = solFotos.length ? "Subiendo fotos…" : "Enviando…";
     el.solError.hidden = true;
-    if (state.perfil === "punto") guarda("brc.reporta", s.reporta.value.trim());
+    if (state.perfil === "punto") {
+      guarda("brc.reporta", s.reporta.value.trim());
+      guarda("brc.cargo", s.cargo.value.trim());
+    }
 
     subirFotos(punto).then(function (fotos) {
       el.solEnviar.textContent = "Enviando…";
       return sb.from("solicitudes").insert({
         punto: punto,
         reportado_por: s.reporta.value.trim(),
+        cargo_reporta: s.cargo.value.trim(),
         categoria: s.categoria.value || null,
         descripcion: s.descripcion.value.trim(),
         urgencia: s.urgencia.value,
@@ -6263,7 +6279,7 @@ body { font-variant-numeric: tabular-nums; }
     el.progGuardar.textContent = "Programando…";
     /* fechaHora() termina en "p. m.": se separa con " · " para no repetir el punto. */
     var obs = "Solicitud de " + nombrePunto(s.punto) +
-      (s.reportado_por ? " (" + s.reportado_por + ")" : "") +
+      (s.reportado_por ? " (" + quienReporta(s) + ")" : "") +
       " · enviada el " + fechaHora(s.creado) +
       (s.afecta_operacion ? " · Impide operar" : "");
 
