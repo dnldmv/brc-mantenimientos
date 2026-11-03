@@ -538,6 +538,10 @@ button.metric[aria-pressed="true"] { background: var(--accent-soft); box-shadow:
   white-space: nowrap;
   border: 1px solid var(--accent);
 }
+/* Tocar el periodo abre la lista de meses. */
+.periodoactivo { cursor: pointer; user-select: none; }
+.periodoactivo::after { content: "▾"; margin-left: 6px; font-size: .8em; }
+.periodoactivo:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .periodoactivo.todo {
   background: transparent;
   color: var(--fg-muted);
@@ -2424,7 +2428,7 @@ select { pointer-events: none; }
         <button type="button" id="btnLimpiarChips">Limpiar estado y pago</button>
       </div>
     </div>
-    <span class="periodoactivo" id="periodoActivo"></span>
+    <span class="periodoactivo" id="periodoActivo" role="button" tabindex="0" aria-haspopup="listbox" title="Elegir el mes"></span>
     <input id="q" type="search" placeholder="Buscar aquí" aria-label="Buscar descripción, proveedor u observación">
     <div class="viewtoggle" role="group" aria-label="Forma de ver los mantenimientos">
       <button id="vTarjetas" aria-pressed="true">Tarjetas</button>
@@ -3420,6 +3424,7 @@ select { pointer-events: none; }
 
   function cerrarDesplegable(devolverFoco) {
     if (!desp.lista) return;
+    desp.ultimo = { sel: desp.sel, hora: Date.now() };
     desp.lista.remove();
     if (devolverFoco && desp.sel) desp.sel.focus({ preventScroll: true });
     desp.lista = null;
@@ -3436,7 +3441,8 @@ select { pointer-events: none; }
     s.dispatchEvent(new Event("change", { bubbles: true }));
   }
 
-  function abrirDesplegable(s) {
+  /* `ancla`: el elemento bajo el que se abre la lista, si no es el propio select. */
+  function abrirDesplegable(s, ancla) {
     cerrarDesplegable(false);
     var ul = document.createElement("ul");
     ul.className = "desplegable";
@@ -3487,7 +3493,7 @@ select { pointer-events: none; }
     desp.sel = s;
 
     /* Debajo del select; arriba si abajo no cabe. */
-    var r = s.getBoundingClientRect();
+    var r = (ancla || s).getBoundingClientRect();
     var vw = document.documentElement.clientWidth, vh = window.innerHeight;
     var ancho = Math.min(Math.max(r.width, 200), vw - 16);
     var abajo = vh - r.bottom - 12, arriba = r.top - 12;
@@ -4078,6 +4084,22 @@ select { pointer-events: none; }
     el.mesDesde.value = "";
     el.mesHasta.value = "";
     render();
+  });
+
+  /* El periodo azul abre la lista de meses ahí mismo, sin pasar por Filtros.
+     Con "Varios meses" activo, cambia el mes de inicio. */
+  function elegirMesDesdePeriodo() {
+    var u = desp.ultimo;
+    /* El mismo toque que cerró la lista no la vuelve a abrir. */
+    if (u && u.sel === el.mesDesde && Date.now() - u.hora < 350) return;
+    abrirDesplegable(el.mesDesde, el.periodoActivo);
+  }
+  el.periodoActivo.addEventListener("click", elegirMesDesdePeriodo);
+  el.periodoActivo.addEventListener("keydown", function (ev) {
+    if (ev.key === "Enter" || ev.key === " ") {
+      ev.preventDefault();
+      elegirMesDesdePeriodo();
+    }
   });
 
   el.selPunto.addEventListener("change", function () {
