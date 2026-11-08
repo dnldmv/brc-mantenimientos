@@ -2604,6 +2604,7 @@ select { pointer-events: none; }
     <h2>Ficha del mantenimiento</h2>
     <div id="fichaBody"></div>
     <div class="sheet-actions">
+      <button type="button" class="danger" id="fichaEliminar" hidden>Eliminar</button>
       <button type="button" id="fichaEditar" hidden>Editar</button>
       <button type="button" class="primary" id="fichaCerrar">Cerrar</button>
     </div>
@@ -2949,6 +2950,7 @@ select { pointer-events: none; }
   /* Criterios de orden. Los que agrupan llevan `grupo`: la tabla dibuja una
      línea de color cuando ese valor cambia de una fila a la siguiente. */
   var ORDENES = [
+    { id: "cercana", label: "Fecha más cercana" },
     { id: "punto", label: "Punto de venta", grupo: function (r) { return r.punto; } },
     { id: "categoria", label: "Categoría", grupo: function (r) { return r.categoria; } },
     { id: "estado", label: "Estado", grupo: function (r) { return r.estado; } },
@@ -3046,7 +3048,7 @@ select { pointer-events: none; }
     mesDesde: "",
     mesHasta: "",
     variosMeses: false,
-    orden: "punto",
+    orden: "cercana",
     q: "",
     vista: "tarjetas",
     registros: [],
@@ -3125,6 +3127,7 @@ select { pointer-events: none; }
     temaSistema: document.getElementById("temaSistema"),
     btnClaves: document.getElementById("btnClaves"),
     fichaOverlay: document.getElementById("fichaOverlay"),
+    fichaEliminar: document.getElementById("fichaEliminar"),
     fichaBody: document.getElementById("fichaBody"),
     fichaEditar: document.getElementById("fichaEditar"),
     fichaCerrar: document.getElementById("fichaCerrar"),
@@ -4086,12 +4089,13 @@ select { pointer-events: none; }
   fillSelect(el.selOrden, ORDENES.map(function (o) {
     return { value: o.id, label: o.label };
   }));
-  var ordenGuardado = lee("brc.orden");
+  /* Clave nueva: el orden que quedó guardado antes no debe tapar el nuevo orden por defecto. */
+  var ordenGuardado = lee("brc.ordenTrabajos");
   if (ORDENES.some(function (o) { return o.id === ordenGuardado; })) state.orden = ordenGuardado;
   el.selOrden.value = state.orden;
   el.selOrden.addEventListener("change", function () {
     state.orden = el.selOrden.value;
-    guarda("brc.orden", state.orden);
+    guarda("brc.ordenTrabajos", state.orden);
     render();
   });
 
@@ -4206,11 +4210,20 @@ select { pointer-events: none; }
     return 99;
   }
 
+  /* Días entre la fecha del trabajo y hoy, hacia adelante o hacia atrás. Sin fecha, al final. */
+  function distanciaAHoy(r) {
+    var f = fechaClave(r);
+    if (!f) return Number.MAX_SAFE_INTEGER;
+    return Math.abs(new Date(f + "T00:00:00") - new Date(hoyIso() + "T00:00:00"));
+  }
+
   function ordenar(rows) {
     var orden = state.orden;
     return rows.slice().sort(function (a, b) {
       var d = 0;
-      if (orden === "punto") {
+      if (orden === "cercana") {
+        d = distanciaAHoy(a) - distanciaAHoy(b);
+      } else if (orden === "punto") {
         d = posicion(PUNTOS, a.punto) - posicion(PUNTOS, b.punto);
       } else if (orden === "categoria") {
         d = posicion(CATEGORIAS, a.categoria) - posicion(CATEGORIAS, b.categoria);
@@ -5035,6 +5048,14 @@ select { pointer-events: none; }
     body.appendChild(seg);
     pintarSeguimiento(r, seg);
 
+    el.fichaEliminar.hidden = soloLectura();
+    el.fichaEliminar.onclick = function () {
+      var aviso = "¿Eliminar este trabajo? También se borran sus notas de seguimiento. No se puede deshacer.";
+      if (r.planId) aviso += "\n\nViene de un plan preventivo: si no quieres que se repita, pausa también el plan.";
+      if (!window.confirm(aviso)) return;
+      cerrarFicha();
+      eliminar(r);
+    };
     el.fichaEditar.hidden = soloLectura();
     el.fichaEditar.onclick = function () {
       cerrarFicha();
@@ -5524,9 +5545,12 @@ select { pointer-events: none; }
   function eliminar(r) {
     if (!sb) return sinBase();
     state.confirmar = null;
-    sb.from("mantenimientos").delete().eq("id", r.id).then(function (res) {
+    /* Si el servidor no deja borrar, no da error: devuelve cero filas. Hay que comprobarlo. */
+    sb.from("mantenimientos").delete().eq("id", r.id).select("id").then(function (res) {
       if (res && res.error) throw res.error;
-      toast("Mantenimiento eliminado.");
+      toast(res && res.data && res.data.length
+        ? "Mantenimiento eliminado."
+        : "No se eliminó: revisa que hayas entrado como coordinador, recarga la app e intenta de nuevo.");
       return cargarDatos();
     }).catch(fallo);
   }
