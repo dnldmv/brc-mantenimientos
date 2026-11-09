@@ -906,14 +906,6 @@ button.archivobtn:disabled { opacity: .5; cursor: default; }
 .adjrow:has(.archivoelegido:not(:empty)) .adjvacio { display: none; }
 .archivonota { color: var(--fg-muted); }
 
-.obs {
-  font-size: .82rem;
-  color: var(--fg-muted);
-  border-top: 1px dashed var(--line);
-  padding-top: 7px;
-  margin: 0;
-  overflow-wrap: break-word;
-}
 .card-actions { display: flex; gap: 6px; flex-wrap: wrap; margin-top: auto; padding-top: 2px; }
 
 /* ---------- Tabla ---------- */
@@ -968,7 +960,6 @@ td button.tiny { white-space: nowrap; }
   font-variant-numeric: tabular-nums;
 }
 .ficha-dl dd.plain { font-family: var(--font-body); }
-.ficha-obs { font-size: .88rem; margin: 0; overflow-wrap: break-word; }
 th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
 th {
   font-size: .66rem;
@@ -1360,21 +1351,30 @@ body.modo-punto #btnCsv { display: none !important; }
 }
 .solguia { font-size: .86rem; color: var(--fg-muted); margin: 0 0 12px; max-width: 70ch; }
 /* Seguimiento de cada trabajo. */
-.seguultimo { font-size: .82rem; color: var(--fg-muted); margin: 8px 0 0; padding: 7px 10px; background: var(--accent-soft); border-radius: 10px; }
-.seguultimo b { color: var(--accent); font-weight: 600; }
-.seguform { display: flex; flex-direction: column; gap: 8px; margin: 0 0 12px; }
-.seguform textarea { width: 100%; resize: vertical; font: inherit; }
+.ficha-obs { font-size: .88rem; margin: 0; overflow-wrap: break-word; }
+.seguform { display: flex; flex-direction: column; gap: 8px; margin: 0 0 14px; }
+.seguform input, .seguform textarea { width: 100%; box-sizing: border-box; font: inherit; padding: 9px 12px; color: var(--fg); background: var(--surface); border: 1px solid var(--line-strong); border-radius: 12px; }
+.seguform textarea { resize: vertical; }
 .seguform > button { align-self: flex-start; }
 .segusug { gap: 6px; }
 .segusug .chip { font-size: .78rem; }
 .seguvacio { font-size: .85rem; color: var(--fg-muted); margin: 0; }
-.segulista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
-.segulista li { border-left: 3px solid var(--accent); background: var(--surface-2); border-radius: 0 10px 10px 0; padding: 8px 12px; }
-.segulista p { margin: 4px 0 0; font-size: .9rem; white-space: pre-wrap; overflow-wrap: anywhere; }
-.segucab { display: flex; align-items: center; gap: 10px; font-size: .78rem; color: var(--fg-muted); }
-.segucab span { white-space: nowrap; }
-.seguautor { font-weight: 600; }
-.segucab .tiny { margin-left: auto; }
+/* Línea de tiempo vertical: un punto por nota, unidos por una línea. */
+.linea { list-style: none; margin: 0; padding: 0; }
+.linea li { position: relative; padding: 0 0 14px 20px; min-width: 0; }
+.linea li:last-child { padding-bottom: 0; }
+.linea li::before { content: ""; position: absolute; left: 4px; top: 8px; bottom: -8px; width: 2px; background: var(--line-strong); }
+.linea li:last-child::before { display: none; }
+.linea li::after { content: ""; position: absolute; left: 0; top: 4px; width: 10px; height: 10px; border-radius: 50%; background: var(--line-strong); }
+.linea li:first-child::after { background: var(--accent); }
+.lineatitulo { display: block; margin: 0; padding: 0; font-size: .88rem; font-weight: 600; line-height: 1.3; color: var(--fg); text-align: left; overflow-wrap: anywhere; }
+button.lineatitulo, button.lineatitulo:hover { width: 100%; background: transparent; border: 0; border-radius: 0; color: var(--fg); cursor: pointer; }
+button.lineatitulo::after { content: "▾"; display: inline-block; margin-left: 6px; color: var(--accent); transition: transform .15s ease; }
+button.lineatitulo[aria-expanded="true"]::after { transform: rotate(180deg); }
+.lineameta { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 10px; margin-top: 2px; font-size: .75rem; color: var(--fg-muted); }
+.lineameta .tiny { margin-left: auto; }
+.lineadetalle { margin: 6px 0 0; font-size: .84rem; color: var(--fg); white-space: pre-wrap; overflow-wrap: anywhere; }
+.card .linea { border-top: 1px dashed var(--line); padding-top: 9px; }
 /* Preventivos del punto, debajo de sus solicitudes. */
 .prevpunto { margin-top: 28px; }
 .prevtitulo { font-size: .95rem; font-weight: 600; margin: 16px 0 8px; color: var(--fg); }
@@ -2553,10 +2553,6 @@ select { pointer-events: none; }
         <select id="fPago"></select>
       </div>
       <div class="f wide">
-        <label for="fObservaciones">Observaciones</label>
-        <textarea id="fObservaciones" placeholder="Orden de servicio, garantía, repuestos pendientes…"></textarea>
-      </div>
-      <div class="f wide">
         <label>Soportes del mantenimiento</label>
         <div id="adjuntos"></div>
         <span class="hint" id="adjHint">Certificado, cuenta de cobro e informe técnico.</span>
@@ -3330,7 +3326,6 @@ select { pointer-events: none; }
       costoEst: document.getElementById("fCostoEst"),
       costoReal: document.getElementById("fCostoReal"),
       pago: document.getElementById("fPago"),
-      observaciones: document.getElementById("fObservaciones"),
       activo: document.getElementById("fActivo")
     }
   };
@@ -4291,7 +4286,7 @@ select { pointer-events: none; }
         if (hastaMes && f > hastaMes + "-31") return false;
       }
       if (state.q) {
-        var blob = [r.descripcion, r.responsable, r.observaciones, r.estado, r.prioridad, r.tipo,
+        var blob = [r.descripcion, r.responsable, textoNotas(r.id), r.estado, r.prioridad, r.tipo,
           nombrePunto(r.punto)].join(" ").toLowerCase();
         if (blob.indexOf(state.q) === -1) return false;
       }
@@ -4919,23 +4914,13 @@ select { pointer-events: none; }
 
     card.appendChild(filaSoportes(r));
 
-    if (r.observaciones) {
-      var o = document.createElement("p");
-      o.className = "obs";
-      o.textContent = r.observaciones;
-      card.appendChild(o);
-    }
-
-    /* La última nota de seguimiento, para ver de un vistazo en qué va. */
-    var ultima = comentariosDe(r.id)[0];
-    if (ultima) {
-      var u = document.createElement("p");
-      u.className = "seguultimo";
-      var cuando = document.createElement("b");
-      cuando.textContent = fechaHora(ultima.creado) + " · ";
-      u.appendChild(cuando);
-      u.appendChild(document.createTextNode(ultima.texto));
-      card.appendChild(u);
+    /* Las notas más recientes, para ver de un vistazo en qué va; la ficha las tiene todas. */
+    var notas = comentariosDe(r.id);
+    if (notas.length) {
+      card.appendChild(lineaDeTiempo(notas.slice(0, NOTAS_EN_TARJETA), false));
+      if (notas.length > NOTAS_EN_TARJETA) {
+        card.appendChild(botonChico("Ver las " + notas.length + " notas", "", function () { abrirFicha(r); }));
+      }
     }
 
     if (!soloLectura()) {
@@ -5001,7 +4986,7 @@ select { pointer-events: none; }
     var cols = ["Descripción", "Punto"];
     if (conCategoria) cols.push("Categoría");
     cols = cols.concat(["Estado", "Pago", "Prioridad", "Tipo", "Responsable",
-      "Programada", "Realizada", "Estimado", "Ejecutado", "Soportes", "Observaciones", "Ficha"]);
+      "Programada", "Realizada", "Estimado", "Ejecutado", "Soportes", "Última nota", "Ficha"]);
     var thead = document.createElement("thead");
     var trh = document.createElement("tr");
     cols.forEach(function (c) {
@@ -5039,7 +5024,8 @@ select { pointer-events: none; }
       var tdS = document.createElement("td");
       tdS.appendChild(filaSoportes(r));
       tr.appendChild(tdS);
-      celda(tr, r.observaciones || "—", null, true);
+      var ultimaNota = comentariosDe(r.id)[0];
+      celda(tr, ultimaNota ? fechaHora(ultimaNota.creado) + " · " + tituloNota(ultimaNota) : "—", null, true);
 
       var tdF = document.createElement("td");
       var ver = document.createElement("button");
@@ -5123,17 +5109,6 @@ select { pointer-events: none; }
     body.appendChild(sTit);
     body.appendChild(filaSoportes(r));
 
-    if (r.observaciones) {
-      var oTit = document.createElement("p");
-      oTit.className = "ficha-sub";
-      oTit.textContent = "Observaciones";
-      body.appendChild(oTit);
-      var o = document.createElement("p");
-      o.className = "ficha-obs";
-      o.textContent = r.observaciones;
-      body.appendChild(o);
-    }
-
     fichaActual = r;
     var seg = document.createElement("div");
     seg.id = "fichaSeguimiento";
@@ -5165,9 +5140,11 @@ select { pointer-events: none; }
 
   /* ---------- seguimiento de cada trabajo ---------- */
 
-  /* Notas con fecha y hora: permisos, imprevistos, material pedido... La fecha y el autor
-     los pone el servidor; solo el coordinador escribe, la gerencia las lee. */
+  /* Notas con título, detalle opcional, fecha y hora: permisos, imprevistos, material pedido...
+     La fecha y el autor los pone el servidor; solo el coordinador escribe, la gerencia las lee. */
   var fichaActual = null;
+  var NOTAS_EN_TARJETA = 3;
+  var notasAbiertas = {};
   var SUGERENCIAS_SEGUIMIENTO = ["Solicitando permisos en el CC", "Permisos autorizados",
     "Contratista manifiesta imprevisto", "Contratista solicita material"];
 
@@ -5175,9 +5152,65 @@ select { pointer-events: none; }
     return state.comentarios.filter(function (c) { return c.mantenimiento_id === id; });
   }
 
+  function tituloNota(c) { return c.titulo || c.texto; }
+
+  /* Para el buscador y la descarga en Excel. */
+  function textoNotas(id) {
+    return comentariosDe(id).map(function (c) {
+      return [fechaHora(c.creado), c.titulo, c.texto].filter(Boolean).join(" · ");
+    }).join(" | ");
+  }
+
+  /* Línea de tiempo vertical, de la nota más reciente a la más antigua.
+     La flecha despliega el detalle; las notas sin detalle no la llevan. */
+  function lineaDeTiempo(lista, conBorrar) {
+    var ol = document.createElement("ol");
+    ol.className = "linea";
+    lista.forEach(function (c) {
+      var li = document.createElement("li");
+      var hayDetalle = c.titulo && c.texto;
+      var titulo = document.createElement(hayDetalle ? "button" : "p");
+      titulo.className = "lineatitulo";
+      titulo.textContent = tituloNota(c);
+      li.appendChild(titulo);
+
+      var meta = document.createElement("div");
+      meta.className = "lineameta";
+      var cuando = document.createElement("span");
+      cuando.textContent = fechaHora(c.creado);
+      meta.appendChild(cuando);
+      var quien = document.createElement("span");
+      quien.textContent = c.autor_rol === "gerencia" ? "Gerencia" : "Coordinador";
+      meta.appendChild(quien);
+      if (conBorrar && !soloLectura() && c.autor === state.uid) {
+        meta.appendChild(botonChico("Borrar", "", function () { borrarComentario(c); }));
+      }
+      li.appendChild(meta);
+
+      if (hayDetalle) {
+        var det = document.createElement("p");
+        det.className = "lineadetalle";
+        det.textContent = c.texto;
+        var pintar = function () {
+          det.hidden = !notasAbiertas[c.id];
+          titulo.setAttribute("aria-expanded", notasAbiertas[c.id] ? "true" : "false");
+        };
+        titulo.type = "button";
+        titulo.addEventListener("click", function () {
+          notasAbiertas[c.id] = !notasAbiertas[c.id];
+          pintar();
+        });
+        pintar();
+        li.appendChild(det);
+      }
+      ol.appendChild(li);
+    });
+    return ol;
+  }
+
   function cargarComentarios() {
     if (!sb) return Promise.resolve();
-    return sb.from("comentarios").select("id, mantenimiento_id, texto, autor, autor_rol, creado")
+    return sb.from("comentarios").select("id, mantenimiento_id, titulo, texto, autor, autor_rol, creado")
       .order("creado", { ascending: false }).then(function (res) {
         if (res.error) throw res.error;
         state.comentarios = res.data || [];
@@ -5189,17 +5222,20 @@ select { pointer-events: none; }
 
   function pintarSeguimiento(r, cont) {
     /* Si llega una nota nueva mientras se escribe otra, lo escrito no se pierde. */
-    var previo = cont.querySelector(".seguform textarea");
-    var borrador = previo ? previo.value : "";
+    var previoTit = cont.querySelector(".seguform input");
+    var previoDet = cont.querySelector(".seguform textarea");
+    var borradorTit = previoTit ? previoTit.value : "";
+    var borradorDet = previoDet ? previoDet.value : "";
     cont.textContent = "";
     var t = document.createElement("p");
     t.className = "ficha-sub";
-    t.textContent = "Seguimiento";
+    t.textContent = "Línea de tiempo";
     cont.appendChild(t);
 
     if (!soloLectura()) {
       var form = formSeguimiento(r);
-      form.querySelector("textarea").value = borrador;
+      form.querySelector("input").value = borradorTit;
+      form.querySelector("textarea").value = borradorDet;
       cont.appendChild(form);
     }
 
@@ -5207,43 +5243,27 @@ select { pointer-events: none; }
     if (!lista.length) {
       var v = document.createElement("p");
       v.className = "seguvacio";
-      v.textContent = "Todavía no hay notas de seguimiento en este trabajo.";
+      v.textContent = "Todavía no hay notas en este trabajo.";
       cont.appendChild(v);
       return;
     }
-    var ul = document.createElement("ol");
-    ul.className = "segulista";
-    lista.forEach(function (c) {
-      var li = document.createElement("li");
-      var cab = document.createElement("div");
-      cab.className = "segucab";
-      var cuando = document.createElement("span");
-      cuando.textContent = fechaHora(c.creado);
-      cab.appendChild(cuando);
-      var quien = document.createElement("span");
-      quien.className = "seguautor";
-      quien.textContent = c.autor_rol === "gerencia" ? "Gerencia" : "Coordinador";
-      cab.appendChild(quien);
-      if (!soloLectura() && c.autor === state.uid) {
-        cab.appendChild(botonChico("Borrar", "", function () { borrarComentario(c); }));
-      }
-      li.appendChild(cab);
-      var p = document.createElement("p");
-      p.textContent = c.texto;
-      li.appendChild(p);
-      ul.appendChild(li);
-    });
-    cont.appendChild(ul);
+    cont.appendChild(lineaDeTiempo(lista, true));
   }
 
   function formSeguimiento(r) {
     var f = document.createElement("form");
     f.className = "seguform";
+    var tit = document.createElement("input");
+    tit.type = "text";
+    tit.maxLength = 120;
+    tit.placeholder = "Título de la nota";
+    tit.setAttribute("aria-label", "Título de la nota");
+    f.appendChild(tit);
     var ta = document.createElement("textarea");
     ta.rows = 2;
     ta.maxLength = 1000;
-    ta.placeholder = "Escribe cómo va el trabajo…";
-    ta.setAttribute("aria-label", "Nueva nota de seguimiento");
+    ta.placeholder = "Detalles (opcional)";
+    ta.setAttribute("aria-label", "Detalles de la nota");
     f.appendChild(ta);
 
     var sug = document.createElement("div");
@@ -5254,7 +5274,7 @@ select { pointer-events: none; }
       b.className = "chip";
       b.textContent = s;
       b.addEventListener("click", function () {
-        ta.value = s;
+        tit.value = s;
         ta.focus();
       });
       sug.appendChild(b);
@@ -5269,12 +5289,18 @@ select { pointer-events: none; }
 
     f.addEventListener("submit", function (ev) {
       ev.preventDefault();
-      var texto = ta.value.trim();
-      if (!texto || !sb) return;
+      var titulo = tit.value.trim();
+      if (!titulo) {
+        toast("Escribe el título de la nota.");
+        tit.focus();
+        return;
+      }
+      if (!sb) return;
       enviar.disabled = true;
       enviar.textContent = "Guardando…";
-      sb.from("comentarios").insert({ mantenimiento_id: r.id, texto: texto }).then(function (res) {
+      sb.from("comentarios").insert({ mantenimiento_id: r.id, titulo: titulo, texto: ta.value.trim() }).then(function (res) {
         if (res.error) throw res.error;
+        tit.value = "";
         ta.value = "";
         toast("Nota guardada.");
         return cargarComentarios();
@@ -5288,7 +5314,7 @@ select { pointer-events: none; }
   }
 
   function borrarComentario(c) {
-    if (!sb || !window.confirm("¿Borrar esta nota de seguimiento?")) return;
+    if (!sb || !window.confirm("¿Borrar esta nota de la línea de tiempo?")) return;
     sb.from("comentarios").delete().eq("id", c.id).then(function (res) {
       if (res.error) throw res.error;
       return cargarComentarios();
@@ -5391,7 +5417,6 @@ select { pointer-events: none; }
     f.costoEst.value = r && r.costoEstimado !== null && r.costoEstimado !== undefined ? r.costoEstimado : "";
     f.costoReal.value = r && r.costoReal !== null && r.costoReal !== undefined ? r.costoReal : "";
     f.pago.value = r ? (PAGOS.indexOf(r.estadoPago) === -1 ? "Pendiente" : r.estadoPago) : "Pendiente";
-    f.observaciones.value = r ? (r.observaciones || "") : "";
     llenarActivos(f.activo, f.punto.value, r ? r.activoId : "");
 
     sugerencias();
@@ -5501,7 +5526,6 @@ select { pointer-events: none; }
       costoEstimado: f.costoEst.value === "" ? null : Number(f.costoEst.value),
       costoReal: f.costoReal.value === "" ? null : Number(f.costoReal.value),
       estadoPago: f.pago.value,
-      observaciones: f.observaciones.value.trim(),
       activoId: f.activo.value || "",
       actualizado: new Date().toISOString()
     };
@@ -5528,7 +5552,6 @@ select { pointer-events: none; }
       fechaRealizada: f.fecha_realizada || "",
       costoEstimado: f.costo_estimado === null || f.costo_estimado === undefined ? null : Number(f.costo_estimado),
       costoReal: f.costo_real === null || f.costo_real === undefined ? null : Number(f.costo_real),
-      observaciones: f.observaciones || "",
       soportes: f.soportes && typeof f.soportes === "object" ? f.soportes : {},
       activoId: f.activo_id || "",
       planId: f.plan_id || "",
@@ -5550,7 +5573,6 @@ select { pointer-events: none; }
       fecha_realizada: d.fechaRealizada || null,
       costo_estimado: d.costoEstimado,
       costo_real: d.costoReal,
-      observaciones: d.observaciones,
       soportes: d.soportes || {},
       activo_id: d.activoId || null
     };
@@ -5731,7 +5753,6 @@ select { pointer-events: none; }
           fecha_realizada: null,
           costo_estimado: null,
           costo_real: null,
-          observaciones: "Cargado desde la plantilla preventiva.",
           soportes: {}
         });
       });
@@ -5780,7 +5801,7 @@ select { pointer-events: none; }
           return r.soportes && r.soportes[s.key] && r.soportes[s.key].archivo;
         }).map(function (s) { return s.label; }).join(" / ");
       }],
-      ["Observaciones", function (r) { return r.observaciones || ""; }]
+      ["Notas", function (r) { return textoNotas(r.id); }]
     ];
     function esc(v) {
       var s = String(v === null || v === undefined ? "" : v);
@@ -7176,7 +7197,7 @@ select { pointer-events: none; }
     el.progGuardar.disabled = true;
     el.progGuardar.textContent = "Programando…";
     /* fechaHora() termina en "p. m.": se separa con " · " para no repetir el punto. */
-    var obs = "Solicitud de " + nombrePunto(s.punto) +
+    var origen = "Solicitud de " + nombrePunto(s.punto) +
       (s.reportado_por ? " (" + quienReporta(s) + ")" : "") +
       " · enviada el " + fechaHora(s.creado) +
       (s.afecta_operacion ? " · Impide operar" : "");
@@ -7195,11 +7216,16 @@ select { pointer-events: none; }
       fecha_realizada: null,
       costo_estimado: p.costo.value === "" ? null : Number(p.costo.value),
       costo_real: null,
-      observaciones: obs,
       soportes: {},
       activo_id: p.activo.value || null
     }).select("id").single().then(function (res) {
       if (res.error) throw res.error;
+      /* De dónde salió el trabajo queda como su primera nota. */
+      sb.from("comentarios").insert({
+        mantenimiento_id: res.data.id,
+        titulo: "Programado desde una solicitud",
+        texto: origen
+      }).then(cargarComentarios);
       return sb.from("solicitudes").update({
         estado: "Programada",
         prioridad: p.prioridad.value,
