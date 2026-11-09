@@ -1982,6 +1982,41 @@ button.primary:hover { background: var(--accent-hover); border-color: var(--acce
 .sheet { background: var(--surface); border-color: var(--line); border-radius: 26px; padding: 22px; }
 .badge { border-radius: 999px; font-weight: 600; padding: 3px 10px; }
 
+/* Estado y punto, al lado del título del trabajo. */
+.card-top .card-desc, .card-top .ficha-desc { flex: 1; min-width: 0; margin: 0; overflow-wrap: break-word; }
+.titulo-etq { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex-shrink: 0; }
+.ficha-top { margin-bottom: 12px; }
+
+/* Cada punto de venta con su color, también en la etiqueta. */
+:root {
+  --pt-41-bg: #D5F3EE;         --pt-41-fg: #0F6B63;
+  --pt-unico-bg: #EDE4FF;      --pt-unico-fg: #5B2BC4;
+  --pt-viva-bg: #FFE1EE;       --pt-viva-fg: #B0175A;
+  --pt-sincelejo-bg: #FFE6D6;  --pt-sincelejo-fg: #B23F0B;
+  --pt-carnaval-bg: #DCF1FC;   --pt-carnaval-fg: #0B5F8F;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --pt-41-bg: #0F3A36;         --pt-41-fg: #7FE3D4;
+    --pt-unico-bg: #30205E;      --pt-unico-fg: #CDB8FF;
+    --pt-viva-bg: #4A1830;       --pt-viva-fg: #FFA8CE;
+    --pt-sincelejo-bg: #44240F;  --pt-sincelejo-fg: #FFB98C;
+    --pt-carnaval-bg: #123650;   --pt-carnaval-fg: #93D4F7;
+  }
+}
+:root[data-theme="dark"] {
+  --pt-41-bg: #0F3A36;         --pt-41-fg: #7FE3D4;
+  --pt-unico-bg: #30205E;      --pt-unico-fg: #CDB8FF;
+  --pt-viva-bg: #4A1830;       --pt-viva-fg: #FFA8CE;
+  --pt-sincelejo-bg: #44240F;  --pt-sincelejo-fg: #FFB98C;
+  --pt-carnaval-bg: #123650;   --pt-carnaval-fg: #93D4F7;
+}
+.badge.pt-brc-41 { background: var(--pt-41-bg); color: var(--pt-41-fg); }
+.badge.pt-brc-unico { background: var(--pt-unico-bg); color: var(--pt-unico-fg); }
+.badge.pt-brc-viva-baq { background: var(--pt-viva-bg); color: var(--pt-viva-fg); }
+.badge.pt-brc-sincelejo { background: var(--pt-sincelejo-bg); color: var(--pt-sincelejo-fg); }
+.badge.pt-brc-carnaval { background: var(--pt-carnaval-bg); color: var(--pt-carnaval-fg); }
+
 /* Franja de indicadores: casillas sueltas en lugar de una tabla. */
 .metrics { background: transparent; border-bottom: 0; }
 .metrics .band-inner { padding-block: 14px 4px; }
@@ -4968,6 +5003,19 @@ select { pointer-events: none; }
     return s;
   }
 
+  /* Permite cortar después de la barra, en vez de partir la palabra: "inyección/extracción". */
+  function tituloTrabajo(r) {
+    return (r.descripcion || "Sin descripción").replace(/\//g, "/\u200B");
+  }
+
+  function etiquetasTitulo(r) {
+    var box = document.createElement("div");
+    box.className = "titulo-etq";
+    box.appendChild(badge(r.estado || "Pendiente", ESTADO_CLASS[r.estado] || "neutral"));
+    box.appendChild(badge(nombrePunto(r.punto), "pt-" + r.punto));
+    return box;
+  }
+
   function tarjeta(r) {
     var card = document.createElement("article");
     card.className = "card sev-" + (r.prioridad || "Media");
@@ -4976,17 +5024,16 @@ select { pointer-events: none; }
     top.className = "card-top";
     var desc = document.createElement("p");
     desc.className = "card-desc";
-    desc.textContent = r.descripcion || "Sin descripción";
+    desc.textContent = tituloTrabajo(r);
     top.appendChild(desc);
+    top.appendChild(etiquetasTitulo(r));
     card.appendChild(top);
 
     var bs = document.createElement("div");
     bs.className = "badges";
-    bs.appendChild(badge(r.estado || "Pendiente", ESTADO_CLASS[r.estado] || "neutral"));
     bs.appendChild(badge("Prioridad " + (r.prioridad || "Media"), "prio-" + (r.prioridad || "Media")));
     if (r.tipo) bs.appendChild(badge(r.tipo, "neutral"));
     bs.appendChild(estadoPagoDe(r));
-    if (state.punto === "todos") bs.appendChild(badge(nombrePunto(r.punto), "neutral"));
     card.appendChild(bs);
 
     var dl = document.createElement("dl");
@@ -5170,12 +5217,15 @@ select { pointer-events: none; }
 
     var titulo = document.createElement("p");
     titulo.className = "ficha-desc";
-    titulo.textContent = r.descripcion || "Sin descripción";
-    body.appendChild(titulo);
+    titulo.textContent = tituloTrabajo(r);
+    var fichaTop = document.createElement("div");
+    fichaTop.className = "card-top ficha-top";
+    fichaTop.appendChild(titulo);
+    fichaTop.appendChild(etiquetasTitulo(r));
+    body.appendChild(fichaTop);
 
     var bs = document.createElement("div");
     bs.className = "badges";
-    bs.appendChild(badge(r.estado || "Pendiente", ESTADO_CLASS[r.estado] || "neutral"));
     bs.appendChild(badge("Prioridad " + (r.prioridad || "Media"), "prio-" + (r.prioridad || "Media")));
     if (r.tipo) bs.appendChild(badge(r.tipo, "neutral"));
     bs.appendChild(estadoPagoDe(r));
