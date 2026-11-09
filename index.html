@@ -1433,6 +1433,8 @@ button.lineatitulo[aria-expanded="true"]::after { transform: rotate(90deg); }
 #overlay, #fichaOverlay, #actOverlay, #planOverlay { z-index: 45; }
 /* El visor se abre también desde dentro de los formularios: debe quedar encima de todos. */
 #visorOverlay { z-index: 65; }
+/* El comprobante se pide también desde la ficha abierta. */
+#compOverlay { z-index: 50; }
 .actresumen { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; margin-bottom: 12px; }
 .actresumen div, .hojacostos div {
   background: var(--surface);
@@ -2644,6 +2646,23 @@ select { pointer-events: none; }
   </div>
 </div>
 
+<div class="overlay" id="compOverlay" hidden>
+  <div class="sheet">
+    <h2>Comprobante de pago</h2>
+    <p class="finnota">Para marcar como pagado este trabajo, adjunta el comprobante:</p>
+    <p class="pendaviso" id="compTrabajo"></p>
+    <div class="f wide">
+      <input type="file" id="compArchivo" accept="application/pdf,image/png,image/jpeg,image/webp" aria-label="Comprobante de pago">
+      <span class="hint">PDF, JPG, PNG o WebP, hasta 20 MB.</span>
+    </div>
+    <div class="formerror" id="compError" hidden></div>
+    <div class="sheet-actions">
+      <button type="button" id="compCancelar">Cancelar</button>
+      <button type="button" class="primary" id="compGuardar">Guardar como pagado</button>
+    </div>
+  </div>
+</div>
+
 <div class="overlay" id="pendOverlay" hidden>
   <div class="sheet">
     <h2>Eliminar pago pendiente</h2>
@@ -3020,7 +3039,8 @@ select { pointer-events: none; }
   var SOPORTES = [
     { key: "certificado", label: "Certificado" },
     { key: "cuentaCobro", label: "Cuenta de cobro" },
-    { key: "informeTecnico", label: "Informe técnico" }
+    { key: "informeTecnico", label: "Informe técnico" },
+    { key: "comprobantePago", label: "Comprobante de pago" }
   ];
 
   var SUBIDA_CODIGOS = {
@@ -3757,7 +3777,7 @@ select { pointer-events: none; }
     var hint = document.getElementById("adjHint");
     hint.textContent = soloLectura()
       ? "Tu acceso no permite subir archivos. Los soportes ya adjuntos se abren desde la tarjeta."
-      : "Certificado, cuenta de cobro e informe técnico. PDF, JPG, PNG o WebP, hasta 20 MB cada uno.";
+      : "PDF, JPG, PNG o WebP, hasta 20 MB cada uno. El comprobante es obligatorio para marcar el pago como pagado.";
   }
 
   function soportesPrevios(id) {
@@ -4020,6 +4040,7 @@ select { pointer-events: none; }
   mejorarArchivo(el.m.soporte, "Elegir archivo");
   mejorarArchivo(el.a.foto, "Elegir foto");
   mejorarArchivo(el.s.fotos, "Elegir fotos", true);
+  mejorarArchivo(document.getElementById("compArchivo"), "Elegir comprobante");
 
   /* ---------- controles iniciales ---------- */
 
@@ -5447,6 +5468,7 @@ select { pointer-events: none; }
   /* Cierra la ventana o el menú que esté encima; dice si había alguno. */
   function cerrarCapaSuperior() {
     if (!el.visorOverlay.hidden) { cerrarVisor(); return true; }
+    if (!document.getElementById("compOverlay").hidden) { cerrarComprobante(); return true; }
     if (!document.getElementById("pendOverlay").hidden) { cerrarEliminarPendiente(); return true; }
     if (!el.masPanel.hidden) { abrirMas(false); return true; }
     if (!el.planOverlay.hidden) { cerrarPlan(); return true; }
@@ -5518,6 +5540,18 @@ select { pointer-events: none; }
     if (!f.descripcion.value.trim()) faltan.push("la descripción");
     if (faltan.length) {
       el.formError.textContent = "Falta " + faltan.join(", ") + ".";
+      el.formError.hidden = false;
+      return;
+    }
+
+    /* Pasar a Pagado exige comprobante; los que ya estaban pagados no se bloquean al editarlos. */
+    var antes = null;
+    state.registros.forEach(function (x) { if (x.id === state.editando) antes = x; });
+    var quitaComprobante = adjQuitar.comprobantePago;
+    var conComprobante = (adjInputs.comprobantePago.files && adjInputs.comprobantePago.files[0]) ||
+      (antes && tieneComprobante(antes) && !quitaComprobante);
+    if (f.pago.value === "Pagado" && !conComprobante && (!(antes && antes.estadoPago === "Pagado") || quitaComprobante)) {
+      el.formError.textContent = "Para marcar el pago como pagado, adjunta el comprobante de pago.";
       el.formError.hidden = false;
       return;
     }
@@ -5678,6 +5712,83 @@ select { pointer-events: none; }
     }).catch(fallo);
   }
 
+  function tieneComprobante(r) {
+    return !!(r.soportes && r.soportes.comprobantePago && r.soportes.comprobantePago.archivo);
+  }
+
+  /* Marcar como pagado pide el comprobante: se sube y el estado cambia en un solo paso. */
+  var compActual = null;
+  var compOverlay = document.getElementById("compOverlay");
+  var compArchivo = document.getElementById("compArchivo");
+  var compError = document.getElementById("compError");
+  var compGuardar = document.getElementById("compGuardar");
+
+  function abrirComprobante(r, listo) {
+    compActual = { r: r, listo: listo };
+    document.getElementById("compTrabajo").textContent = (r.descripcion || "Sin descripción") + " (" +
+      nombrePunto(r.punto) + (r.responsable ? " · " + r.responsable : "") + ")";
+    compArchivo.value = "";
+    pintarArchivo(compArchivo);
+    compError.hidden = true;
+    compGuardar.disabled = false;
+    compGuardar.textContent = "Guardar como pagado";
+    compOverlay.hidden = false;
+  }
+
+  function cerrarComprobante() {
+    compOverlay.hidden = true;
+    compActual = null;
+  }
+
+  function errorComprobante(texto) {
+    compError.textContent = texto;
+    compError.hidden = false;
+    compGuardar.disabled = false;
+    compGuardar.textContent = "Guardar como pagado";
+  }
+
+  document.getElementById("compCancelar").addEventListener("click", cerrarComprobante);
+  compOverlay.addEventListener("click", function (ev) {
+    if (ev.target === compOverlay) cerrarComprobante();
+  });
+  compGuardar.addEventListener("click", function () {
+    var actual = compActual;
+    var archivo = compArchivo.files && compArchivo.files[0];
+    if (!actual) return;
+    if (!archivo) return errorComprobante("Adjunta el comprobante para poder guardar.");
+    if (archivo.size > 20 * 1024 * 1024) return errorComprobante("El archivo pasa de 20 MB. Elige uno más liviano.");
+    if (!sb) return sinBase();
+
+    var r = actual.r;
+    var tipo = archivo.type || tipoPorNombre(archivo.name) || "application/pdf";
+    var ruta = "comprobantePago/" + Date.now() + "-" + rutaSegura(archivo.name);
+    var soportes = Object.assign({}, r.soportes);
+    soportes.comprobantePago = { archivo: ruta, nombre: archivo.name, tipo: tipo };
+    compError.hidden = true;
+    compGuardar.disabled = true;
+    compGuardar.textContent = "Guardando…";
+
+    sb.storage.from("soportes").upload(ruta, archivo, { contentType: tipo, upsert: false }).then(function (res) {
+      if (res.error) throw res.error;
+      return sb.from("mantenimientos").update({ estado_pago: "Pagado", soportes: soportes }).eq("id", r.id).select("id");
+    }).then(function (res) {
+      if (res.error || !res.data || !res.data.length) {
+        /* Sin el cambio de estado, el archivo no debe quedar suelto. */
+        sb.storage.from("soportes").remove([ruta]);
+        throw res.error || new Error("sin permiso");
+      }
+      r.estadoPago = "Pagado";
+      r.soportes = soportes;
+      if (actual.listo) actual.listo();
+      cerrarComprobante();
+      if (fichaActual && fichaActual.id === r.id) abrirFicha(r);
+      toast("Pago marcado como pagado, con su comprobante.");
+      return cargarDatos();
+    }).catch(function () {
+      errorComprobante("No se pudo guardar y el pago sigue como estaba. Revisa la conexión e intenta de nuevo.");
+    });
+  });
+
   /* Quien puede editar ve un botón con el estado del pago, que abre la lista para cambiarlo. */
   function estadoPagoDe(r) {
     var pago = r.estadoPago || "Pendiente";
@@ -5704,6 +5815,10 @@ select { pointer-events: none; }
     });
     sel.addEventListener("change", function () {
       var nuevo = sel.value;
+      if (nuevo === "Pagado" && !tieneComprobante(r)) {
+        abrirComprobante(r, pintar);
+        return;
+      }
       avanzarPago(r, nuevo, function () {
         r.estadoPago = nuevo;
         pintar();
