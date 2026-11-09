@@ -4265,12 +4265,13 @@ select { pointer-events: none; }
   }
 
   /* Lista de meses propia, en español: el selector de mes del navegador sale en el
-     idioma del teléfono y se corta en pantallas angostas. Del más reciente al más antiguo. */
+     idioma del teléfono y se corta en pantallas angostas. Del más antiguo al más reciente:
+     arriba del mes elegido quedan los pasados. */
   function llenarMeses(sel) {
     var hoy = new Date();
     var opciones = [{ value: "", label: "—" }];
-    for (var y = hoy.getFullYear() + 1; y >= hoy.getFullYear() - 2; y--) {
-      for (var m = 12; m >= 1; m--) {
+    for (var y = hoy.getFullYear() - 2; y <= hoy.getFullYear() + 1; y++) {
+      for (var m = 1; m <= 12; m++) {
         var ym = y + "-" + dosDigitos(m);
         opciones.push({ value: ym, label: etiquetaMes(ym) });
       }
