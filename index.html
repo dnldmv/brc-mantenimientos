@@ -2020,6 +2020,11 @@ button.metric[aria-pressed="true"] { box-shadow: inset 0 0 0 2px var(--accent); 
 }
 .hoyfila.vencido .cuando { background: var(--s-pend-bg); color: var(--s-pend-fg); }
 .hoyfila.sol .cuando { background: var(--s-curs-bg); color: var(--s-curs-fg); }
+/* Fila de "Próximos 7 días": la fila, el botón Ver más y las notas, en una sola tarjeta. */
+.hoyext { display: flex; flex-direction: column; min-width: 0; background: var(--surface); border-radius: 18px; box-shadow: var(--shadow); }
+.hoyext .hoyfila { background: transparent; box-shadow: none; }
+.hoyext .hoyextver { align-self: flex-start; margin: -4px 14px 12px; }
+.hoyextnotas { margin: 0 14px 14px; padding-top: 10px; border-top: 1px dashed var(--line); }
 
 /* Secciones en el computador: grupo en píldora y botón de nueva solicitud a la derecha. */
 .secciones { background: transparent; border-bottom: 0; }
@@ -8737,6 +8742,9 @@ select { pointer-events: none; }
     return b;
   }
 
+  /* Filas de "Próximos 7 días" con las notas abiertas: se conservan al redibujar. */
+  var proximosAbiertos = {};
+
   function filaHoy(titulo, detalle, cuando, cls, fn) {
     var b = document.createElement("button");
     b.type = "button";
@@ -8883,10 +8891,45 @@ select { pointer-events: none; }
       return filaHoy(r.descripcion || "Sin descripción", detalle, cuando, vencido ? "vencido" : "", function () { abrirFicha(r); });
     }
 
+    /* La fila sigue abriendo la ficha; "Ver más" despliega sus notas ahí mismo. */
+    function filaProxima(r) {
+      var caja = document.createElement("div");
+      caja.className = "hoyext";
+      caja.appendChild(filaMant(r, false));
+
+      var notas = document.createElement("div");
+      notas.className = "hoyextnotas";
+      var lista = comentariosDe(r.id);
+      if (lista.length) {
+        notas.appendChild(lineaDeTiempo(lista, false));
+      } else {
+        var v = document.createElement("p");
+        v.className = "seguvacio";
+        v.textContent = "Todavía no hay notas en este trabajo.";
+        notas.appendChild(v);
+      }
+
+      var ver = botonChico("", "", function () {
+        proximosAbiertos[r.id] = !proximosAbiertos[r.id];
+        pintar();
+      });
+      ver.classList.add("hoyextver");
+      var pintar = function () {
+        var abierto = !!proximosAbiertos[r.id];
+        notas.hidden = !abierto;
+        ver.textContent = abierto ? "Ver menos" : "Ver más";
+        ver.setAttribute("aria-expanded", abierto ? "true" : "false");
+      };
+      pintar();
+      caja.appendChild(ver);
+      caja.appendChild(notas);
+      return caja;
+    }
+
     wrap.appendChild(bloqueHoy("hoyVencidos", "Vencidos",
       vencidos.map(function (r) { return filaMant(r, true); }), "Nada vencido. Todo lo programado está al día."));
     wrap.appendChild(bloqueHoy("hoySemana", "Próximos 7 días",
-      semana.map(function (r) { return filaMant(r, false); }), "No hay trabajos programados para esta semana."));
+      semana.map(filaProxima), "No hay trabajos programados para esta semana."));
     wrap.appendChild(bloqueHoy("hoySolicitudes", "Solicitudes nuevas",
       nuevas.map(function (s) {
         return filaHoy(s.descripcion, nombrePunto(s.punto) + " · urgencia " + String(s.urgencia || "Media").toLowerCase(),
