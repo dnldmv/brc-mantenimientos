@@ -4992,13 +4992,10 @@ select { pointer-events: none; }
     var dl = document.createElement("dl");
     dl.className = "dl";
     pareja(dl, "Responsable", r.responsable || "—", true);
-    if (yaRealizado(r)) {
-      pareja(dl, "Fecha de ejecución", fecha(r.fechaRealizada));
-      pareja(dl, "Costo final", cop(r.costoReal));
-    } else {
-      pareja(dl, "Programada", fecha(r.fechaProgramada));
-      pareja(dl, "Estimado", cop(r.costoEstimado));
-    }
+    if (yaRealizado(r)) pareja(dl, "Fecha de ejecución", fecha(r.fechaRealizada));
+    else pareja(dl, "Programada", fecha(r.fechaProgramada));
+    if (r.estadoPago === "Pagado") pareja(dl, "Costo final", cop(r.costoReal));
+    else pareja(dl, "Estimado", cop(r.costoEstimado));
     card.appendChild(dl);
 
     card.appendChild(filaSoportes(r));
@@ -5161,7 +5158,8 @@ select { pointer-events: none; }
     dl.appendChild(dd);
   }
 
-  /* Un trabajo ya hecho muestra su fecha de ejecución y costo final; uno por hacer, lo previsto. */
+  /* Un trabajo ya hecho muestra su fecha de ejecución; uno por hacer, la programada.
+     El costo es aparte: estimado hasta que el pago queda en Pagado, y ahí costo final. */
   function yaRealizado(r) {
     return r.estado === "Completado" || !!r.fechaRealizada;
   }
@@ -5191,13 +5189,10 @@ select { pointer-events: none; }
     var plan = r.planId ? buscarPlan(r.planId) : null;
     if (plan) parFicha(dl, "Plan preventivo", textoCada(plan.cada_meses) + (plan.vigente ? "" : " · pausado"));
     parFicha(dl, "Responsable", r.responsable || "—");
-    if (yaRealizado(r)) {
-      parFicha(dl, "Fecha de ejecución", fecha(r.fechaRealizada), true);
-      parFicha(dl, "Costo final", cop(r.costoReal), true);
-    } else {
-      parFicha(dl, "Fecha programada", fecha(r.fechaProgramada), true);
-      parFicha(dl, "Costo estimado", cop(r.costoEstimado), true);
-    }
+    if (yaRealizado(r)) parFicha(dl, "Fecha de ejecución", fecha(r.fechaRealizada), true);
+    else parFicha(dl, "Fecha programada", fecha(r.fechaProgramada), true);
+    if (r.estadoPago === "Pagado") parFicha(dl, "Costo final", cop(r.costoReal), true);
+    else parFicha(dl, "Costo estimado", cop(r.costoEstimado), true);
     body.appendChild(dl);
 
     var sTit = document.createElement("p");
@@ -5889,6 +5884,8 @@ select { pointer-events: none; }
       avanzarPago(r, nuevo, function () {
         r.estadoPago = nuevo;
         pintar();
+        /* La ficha abierta no se redibuja sola, y su costo depende del pago. */
+        if (fichaActual && fichaActual.id === r.id) abrirFicha(r);
       });
     });
     b.addEventListener("click", function () {
