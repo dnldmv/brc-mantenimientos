@@ -870,17 +870,25 @@ main .band-inner { padding-block: 12px 56px; }
 .adjactual { font-size: .8rem; display: flex; align-items: center; gap: 7px; flex-wrap: wrap; min-width: 0; }
 .adjactual a { color: var(--accent); overflow-wrap: anywhere; }
 .adjmuted { color: var(--fg-muted); font-style: italic; }
-.adjrow input[type="file"] {
-  font-family: var(--font-body);
-  font-size: .78rem;
-  padding: 5px;
-  flex: 1 1 170px;
-  min-width: 0;
-  background: var(--surface);
-  color: var(--fg);
-  border: 1px solid var(--line-strong);
-  border-radius: var(--radius);
+/* Botón propio de elegir archivo, con el archivo elegido al lado. */
+.archivo { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; min-width: 0; }
+.adjrow .archivo { flex: 1 1 170px; }
+button.archivobtn,
+button.archivobtn:hover {
+  background: var(--accent-soft);
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  padding: 7px 14px;
+  font-size: .82rem;
+  font-weight: 600;
+  width: auto;
 }
+button.archivobtn:disabled { opacity: .5; cursor: default; }
+.archivoelegido { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; font-size: .8rem; min-width: 0; }
+.archivoelegido:empty { display: none; }
+.adjrow:has(.archivoelegido:not(:empty)) .adjvacio { display: none; }
+.archivonota { color: var(--fg-muted); }
 
 .obs {
   font-size: .82rem;
@@ -1402,7 +1410,9 @@ body.modo-punto #btnCsv { display: none !important; }
 
 /* ---------- Hoja de vida de activos ---------- */
 /* Formularios, fichas y visor se abren por encima de la hoja de vida. */
-#overlay, #fichaOverlay, #visorOverlay, #actOverlay, #planOverlay { z-index: 45; }
+#overlay, #fichaOverlay, #actOverlay, #planOverlay { z-index: 45; }
+/* El visor se abre también desde dentro de los formularios: debe quedar encima de todos. */
+#visorOverlay { z-index: 65; }
 .actresumen { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; margin-bottom: 12px; }
 .actresumen div, .hojacostos div {
   background: var(--surface);
@@ -3580,6 +3590,56 @@ select { pointer-events: none; }
     return "";
   }
 
+  /* El control del navegador no se puede estilizar y su texto sale en el idioma del teléfono:
+     se oculta y en su lugar va un botón de la app, con el archivo elegido, para revisarlo
+     o quitarlo antes de guardar. `sinLista`: la lista del elegido la pinta quien lo usa. */
+  function mejorarArchivo(inp, texto, sinLista) {
+    var caja = document.createElement("div");
+    caja.className = "archivo";
+    var b = document.createElement("button");
+    b.type = "button";
+    b.className = "archivobtn";
+    b.textContent = texto;
+    b.addEventListener("click", function () { if (!inp.disabled) inp.click(); });
+    caja.appendChild(b);
+    var elegido = document.createElement("span");
+    elegido.className = "archivoelegido";
+    caja.appendChild(elegido);
+    inp.parentNode.insertBefore(caja, inp.nextSibling);
+    inp.hidden = true;
+    inp.archivoUI = { boton: b, elegido: elegido, texto: texto, sinLista: !!sinLista };
+    if (!sinLista) inp.addEventListener("change", function () { pintarArchivo(inp); });
+  }
+
+  function pintarArchivo(inp) {
+    var ui = inp.archivoUI;
+    ui.boton.disabled = inp.disabled;
+    if (ui.sinLista) return;
+    var f = inp.files && inp.files[0];
+    ui.boton.textContent = f ? "Cambiar archivo" : ui.texto;
+    ui.elegido.textContent = "";
+    if (!f) return;
+    var ver = document.createElement("button");
+    ver.type = "button";
+    ver.className = "enlacearchivo";
+    ver.textContent = f.name;
+    ver.title = "Ver este archivo";
+    ver.addEventListener("click", function () {
+      verSoporte({ archivo: "local", nombre: f.name, tipo: f.type, blob: f });
+    });
+    ui.elegido.appendChild(ver);
+    var nota = document.createElement("span");
+    nota.className = "archivonota";
+    nota.textContent = (f.size < 1048576
+      ? Math.max(1, Math.round(f.size / 1024)) + " KB"
+      : (f.size / 1048576).toFixed(1) + " MB") + " · sin guardar";
+    ui.elegido.appendChild(nota);
+    ui.elegido.appendChild(botonChico("Quitar", "", function () {
+      inp.value = "";
+      pintarArchivo(inp);
+    }));
+  }
+
   function construirAdjuntos() {
     var cont = document.getElementById("adjuntos");
     cont.textContent = "";
@@ -3604,6 +3664,7 @@ select { pointer-events: none; }
       inp.setAttribute("aria-label", "Adjuntar " + s.label.toLowerCase());
       adjInputs[s.key] = inp;
       row.appendChild(inp);
+      mejorarArchivo(inp, "Elegir archivo");
 
       cont.appendChild(row);
     });
@@ -3615,6 +3676,7 @@ select { pointer-events: none; }
       var inp = adjInputs[s.key];
       inp.value = "";
       inp.disabled = soloLectura();
+      pintarArchivo(inp);
 
       var cont = document.getElementById("adjActual-" + s.key);
       cont.textContent = "";
@@ -3644,7 +3706,7 @@ select { pointer-events: none; }
         }
       } else {
         var m2 = document.createElement("span");
-        m2.className = "adjmuted";
+        m2.className = "adjmuted adjvacio";
         m2.textContent = "sin adjuntar";
         cont.appendChild(m2);
       }
@@ -3704,6 +3766,8 @@ select { pointer-events: none; }
 
   /* Trae el archivo del almacenamiento y lo entrega al navegador. */
   function bajarBlob(sop) {
+    /* Un archivo recién elegido, que aún no se ha subido. */
+    if (sop.blob) return Promise.resolve(sop.blob);
     return sb.storage.from(sop.bucket || "soportes").download(sop.archivo).then(function (res) {
       if (res.error) throw res.error;
       return res.data;
@@ -3911,6 +3975,9 @@ select { pointer-events: none; }
   }
 
   construirAdjuntos();
+  mejorarArchivo(el.m.soporte, "Elegir archivo");
+  mejorarArchivo(el.a.foto, "Elegir foto");
+  mejorarArchivo(el.s.fotos, "Elegir fotos", true);
 
   /* ---------- controles iniciales ---------- */
 
@@ -6825,6 +6892,7 @@ select { pointer-events: none; }
       el.s.fotosPrev.appendChild(chip);
     });
     el.s.fotos.disabled = solFotos.length >= 3;
+    pintarArchivo(el.s.fotos);
   }
 
   el.s.fotos.addEventListener("change", function () {
@@ -7627,6 +7695,7 @@ select { pointer-events: none; }
     x.espec.value = a ? a.especificaciones : "";
     x.notas.value = a ? a.notas : "";
     x.foto.value = "";
+    pintarArchivo(x.foto);
     x.fotoHint.textContent = a && a.foto ? "Ya tiene foto: si eliges otra, la reemplaza." : "Opcional.";
     el.actEliminar.hidden = !a;
     el.actError.hidden = true;
@@ -8349,6 +8418,7 @@ select { pointer-events: none; }
     x.ref.value = m ? m.referencia : "";
     x.notas.value = m ? m.notas : "";
     x.soporte.value = "";
+    pintarArchivo(x.soporte);
     x.soporteHint.textContent = m && m.soporte
       ? "Ya tiene soporte: si eliges otro, lo reemplaza."
       : "Opcional. PDF, JPG, PNG o WebP, hasta 20 MB.";
