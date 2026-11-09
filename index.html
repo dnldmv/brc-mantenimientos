@@ -1982,9 +1982,10 @@ button.primary:hover { background: var(--accent-hover); border-color: var(--acce
 .sheet { background: var(--surface); border-color: var(--line); border-radius: 26px; padding: 22px; }
 .badge { border-radius: 999px; font-weight: 600; padding: 3px 10px; }
 
-/* Estado y punto, al lado del título del trabajo. */
-.card-top .card-desc, .card-top .ficha-desc { flex: 1; min-width: 0; margin: 0; overflow-wrap: break-word; }
-.titulo-etq { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex-shrink: 0; }
+/* Estado y punto en una fila; debajo, el título del trabajo a todo el ancho. */
+.card-top { flex-direction: column; gap: 6px; }
+.card-top .card-desc, .card-top .ficha-desc { min-width: 0; margin: 0; overflow-wrap: break-word; }
+.titulo-etq { display: flex; flex-wrap: wrap; gap: 5px; }
 .ficha-top { margin-bottom: 12px; }
 
 /* Cada punto de venta con su color, también en la etiqueta. */
@@ -5025,8 +5026,8 @@ select { pointer-events: none; }
     var desc = document.createElement("p");
     desc.className = "card-desc";
     desc.textContent = tituloTrabajo(r);
-    top.appendChild(desc);
     top.appendChild(etiquetasTitulo(r));
+    top.appendChild(desc);
     card.appendChild(top);
 
     var bs = document.createElement("div");
@@ -5220,8 +5221,8 @@ select { pointer-events: none; }
     titulo.textContent = tituloTrabajo(r);
     var fichaTop = document.createElement("div");
     fichaTop.className = "card-top ficha-top";
-    fichaTop.appendChild(titulo);
     fichaTop.appendChild(etiquetasTitulo(r));
+    fichaTop.appendChild(titulo);
     body.appendChild(fichaTop);
 
     var bs = document.createElement("div");
