@@ -789,6 +789,21 @@ main .band-inner { padding-block: 12px 56px; }
 .badge.st-Completado { background: var(--s-comp-bg); color: var(--s-comp-fg); }
 .badge.neutral { background: var(--surface-2); color: var(--fg-muted); }
 .badge.pago { background: transparent; border: 1px solid currentColor; }
+/* Estado del pago como botón: mismo aspecto de la etiqueta, con flecha. */
+button.badge.pagobtn,
+button.badge.pagobtn:hover {
+  width: auto;
+  min-height: 0;
+  background: transparent;
+  border: 1px solid currentColor;
+  cursor: pointer;
+  font-family: inherit;
+  white-space: nowrap;
+}
+button.badge.pagobtn::after { content: "▾"; margin-left: 5px; }
+button.badge.pg-Pendiente, button.badge.pg-Pendiente:hover { color: var(--s-pend-fg); }
+button.badge.pg-Remitido, button.badge.pg-Remitido:hover { color: var(--s-prog-fg); }
+button.badge.pg-Pagado, button.badge.pg-Pagado:hover { color: var(--s-comp-fg); }
 .badge.pg-Pendiente { color: var(--s-pend-fg); }
 .badge.pg-Remitido { color: var(--s-prog-fg); }
 .badge.pg-Pagado { color: var(--s-comp-fg); }
@@ -4887,8 +4902,7 @@ select { pointer-events: none; }
     bs.appendChild(badge(r.estado || "Pendiente", ESTADO_CLASS[r.estado] || "neutral"));
     bs.appendChild(badge("Prioridad " + (r.prioridad || "Media"), "prio-" + (r.prioridad || "Media")));
     if (r.tipo) bs.appendChild(badge(r.tipo, "neutral"));
-    bs.appendChild(badge("Pago: " + (r.estadoPago || "Pendiente").toLowerCase(),
-      "pago pg-" + (r.estadoPago || "Pendiente")));
+    bs.appendChild(estadoPagoDe(r));
     if (state.punto === "todos") bs.appendChild(badge(nombrePunto(r.punto), "neutral"));
     card.appendChild(bs);
 
@@ -4936,17 +4950,6 @@ select { pointer-events: none; }
         bAv.textContent = "Pasar a " + siguiente.toLowerCase();
         bAv.addEventListener("click", function () { avanzar(r, siguiente); });
         acts.appendChild(bAv);
-      }
-
-      var pagoActual = r.estadoPago || "Pendiente";
-      var sigPago = PAGOS[Math.min(PAGOS.indexOf(pagoActual) + 1, PAGOS.length - 1)];
-      if (sigPago !== pagoActual) {
-        var bPg = document.createElement("button");
-        bPg.type = "button";
-        bPg.className = "tiny";
-        bPg.textContent = "Marcar pago " + sigPago.toLowerCase();
-        bPg.addEventListener("click", function () { avanzarPago(r, sigPago); });
-        acts.appendChild(bPg);
       }
 
       var bEd = document.createElement("button");
@@ -5024,7 +5027,7 @@ select { pointer-events: none; }
       tdE.appendChild(badge(r.estado || "Pendiente", ESTADO_CLASS[r.estado] || "neutral"));
       tr.appendChild(tdE);
       var tdP = document.createElement("td");
-      tdP.appendChild(badge(r.estadoPago || "Pendiente", "pago pg-" + (r.estadoPago || "Pendiente")));
+      tdP.appendChild(estadoPagoDe(r));
       tr.appendChild(tdP);
       celda(tr, r.prioridad || "—");
       celda(tr, r.tipo || "—");
@@ -5097,8 +5100,7 @@ select { pointer-events: none; }
     bs.appendChild(badge(r.estado || "Pendiente", ESTADO_CLASS[r.estado] || "neutral"));
     bs.appendChild(badge("Prioridad " + (r.prioridad || "Media"), "prio-" + (r.prioridad || "Media")));
     if (r.tipo) bs.appendChild(badge(r.tipo, "neutral"));
-    bs.appendChild(badge("Pago: " + (r.estadoPago || "Pendiente").toLowerCase(),
-      "pago pg-" + (r.estadoPago || "Pendiente")));
+    bs.appendChild(estadoPagoDe(r));
     body.appendChild(bs);
 
     var dl = document.createElement("dl");
@@ -5630,8 +5632,60 @@ select { pointer-events: none; }
     cambiar(r, cambios, "Estado actualizado a " + estado.toLowerCase() + ".");
   }
 
-  function avanzarPago(r, estadoPago) {
-    cambiar(r, { estado_pago: estadoPago }, "Pago marcado como " + estadoPago.toLowerCase() + ".");
+  /* `listo` actualiza lo que no se vuelve a dibujar solo, como la ficha abierta. */
+  function avanzarPago(r, estadoPago, listo) {
+    if (!sb) return sinBase();
+    sb.from("mantenimientos").update({ estado_pago: estadoPago }).eq("id", r.id).select("id").then(function (res) {
+      if (res.error) throw res.error;
+      if (!res.data || !res.data.length) {
+        toast("No se cambió el pago: revisa que hayas entrado como coordinador y recarga la app.");
+        return null;
+      }
+      if (listo) listo();
+      toast("Pago marcado como " + estadoPago.toLowerCase() + ".");
+      return cargarDatos();
+    }).catch(fallo);
+  }
+
+  /* Quien puede editar ve un botón con el estado del pago, que abre la lista para cambiarlo. */
+  function estadoPagoDe(r) {
+    var pago = r.estadoPago || "Pendiente";
+    if (soloLectura()) return badge("Pago: " + pago.toLowerCase(), "pago pg-" + pago);
+
+    var b = document.createElement("button");
+    b.type = "button";
+    b.setAttribute("aria-haspopup", "listbox");
+    b.title = "Cambiar el estado del pago";
+    var pintar = function () {
+      var p = r.estadoPago || "Pendiente";
+      b.className = "badge pago pagobtn pg-" + p;
+      b.textContent = "Pago: " + p.toLowerCase();
+    };
+    pintar();
+
+    var sel = document.createElement("select");
+    sel.setAttribute("aria-label", "Estado del pago");
+    PAGOS.forEach(function (p) {
+      var op = document.createElement("option");
+      op.value = p;
+      op.textContent = p;
+      sel.appendChild(op);
+    });
+    sel.addEventListener("change", function () {
+      var nuevo = sel.value;
+      avanzarPago(r, nuevo, function () {
+        r.estadoPago = nuevo;
+        pintar();
+      });
+    });
+    b.addEventListener("click", function () {
+      /* El mismo toque que cerró la lista no la vuelve a abrir. */
+      var u = desp.ultimo;
+      if (u && u.sel === sel && Date.now() - u.hora < 350) return;
+      sel.value = r.estadoPago || "Pendiente";
+      abrirDesplegable(sel, b);
+    });
+    return b;
   }
 
   function eliminar(r) {
