@@ -1374,6 +1374,10 @@ button.lineatitulo[aria-expanded="true"]::after { transform: rotate(90deg); }
 .lineameta { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 10px; margin-top: 2px; font-size: .75rem; color: var(--fg-muted); }
 .lineameta .tiny { margin-left: auto; }
 .lineadetalle { margin: 6px 0 0; font-size: .84rem; color: var(--fg); white-space: pre-wrap; overflow-wrap: anywhere; }
+/* La última actualización resalta: las anteriores van más pequeñas y tenues, salvo al abrirlas. */
+.linea li:not(:first-child) .lineatitulo { font-size: .8rem; font-weight: 500; }
+.linea li:not(:first-child) > * { opacity: .65; }
+.linea li:not(:first-child):has([aria-expanded="true"]) > * { opacity: 1; }
 .card .linea { border-top: 1px dashed var(--line); padding-top: 9px; }
 /* Preventivos del punto, debajo de sus solicitudes. */
 .prevpunto { margin-top: 28px; }
