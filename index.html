@@ -784,6 +784,7 @@ main .band-inner { padding-block: 12px 56px; }
 }
 .badge.st-Pendiente { background: var(--s-pend-bg); color: var(--s-pend-fg); }
 .badge.st-Programado { background: var(--s-prog-bg); color: var(--s-prog-fg); }
+.badge.st-PorAsignar { background: var(--zest); color: #0F1430; }
 .badge.st-EnCurso { background: var(--s-curs-bg); color: var(--s-curs-fg); }
 .badge.st-Completado { background: var(--s-comp-bg); color: var(--s-comp-fg); }
 .badge.neutral { background: var(--surface-2); color: var(--fg-muted); }
@@ -3004,10 +3005,12 @@ select { pointer-events: none; }
   };
 
   /* Solicitudes que los puntos envían cuando algo se daña. */
-  var ESTADOS_SOL = ["Nueva", "Programada", "En curso", "Resuelta", "Rechazada"];
-  var SOL_ABIERTAS = ["Nueva", "Programada", "En curso"];
+  var SOL_POR_ASIGNAR = "Aceptada por asignar";
+  var ESTADOS_SOL = ["Nueva", SOL_POR_ASIGNAR, "Programada", "En curso", "Resuelta", "Rechazada"];
+  var SOL_ABIERTAS = ["Nueva", SOL_POR_ASIGNAR, "Programada", "En curso"];
   var SOL_CLASS = {
     "Nueva": "st-Pendiente",
+    "Aceptada por asignar": "st-PorAsignar",
     "Programada": "st-Programado",
     "En curso": "st-EnCurso",
     "Resuelta": "st-Completado",
@@ -6386,7 +6389,7 @@ select { pointer-events: none; }
   el.tabAct.addEventListener("click", function () { irASeccion("activos"); });
   el.tabFin.addEventListener("click", function () { irASeccion("finanzas"); });
 
-  /* Las nuevas primero; luego de la más reciente a la más antigua. */
+  /* Las nuevas primero, luego las aceptadas sin asignar; dentro de cada grupo, de la más reciente a la más antigua. */
   function solicitudesVisibles() {
     var lista = state.solicitudes.slice();
     if (state.perfil !== "punto") {
@@ -6401,8 +6404,8 @@ select { pointer-events: none; }
       });
     }
     lista.sort(function (a, b) {
-      var na = a.estado === "Nueva" ? 0 : 1;
-      var nb = b.estado === "Nueva" ? 0 : 1;
+      var na = a.estado === "Nueva" ? 0 : (a.estado === SOL_POR_ASIGNAR ? 1 : 2);
+      var nb = b.estado === "Nueva" ? 0 : (b.estado === SOL_POR_ASIGNAR ? 1 : 2);
       if (na !== nb) return na - nb;
       return String(b.creado).localeCompare(String(a.creado));
     });
@@ -6662,7 +6665,10 @@ select { pointer-events: none; }
 
     var acts = document.createElement("div");
     acts.className = "card-actions";
-    if (state.perfil === "coordinador" && s.estado === "Nueva") {
+    if (state.perfil === "coordinador" && (s.estado === "Nueva" || s.estado === SOL_POR_ASIGNAR)) {
+      if (s.estado === "Nueva") {
+        acts.appendChild(botonChico("Aceptar, por asignar", "", function () { aceptarSolicitud(s); }));
+      }
       acts.appendChild(botonChico("Programar", "primary", function () { abrirProgramar(s, "programar"); }));
       acts.appendChild(botonChico("Rechazar", "danger", function () { abrirProgramar(s, "rechazar"); }));
     } else if (state.perfil !== "punto" && s.mantenimiento_id) {
@@ -6670,6 +6676,18 @@ select { pointer-events: none; }
     }
     if (acts.children.length) card.appendChild(acts);
     return card;
+  }
+
+  /* Aceptada, pero todavía sin contratista ni fecha. Se comprueba la fila: sin permiso no hay error. */
+  function aceptarSolicitud(s) {
+    if (!sb) return sinBase();
+    sb.from("solicitudes").update({ estado: SOL_POR_ASIGNAR }).eq("id", s.id).select("id").then(function (res) {
+      if (res.error) throw res.error;
+      toast(res.data && res.data.length
+        ? "Solicitud aceptada, por asignar. El punto ya lo puede ver."
+        : "No se pudo aceptar la solicitud. Recarga la app e intenta de nuevo.");
+      return cargarSolicitudes();
+    }).catch(fallo);
   }
 
   function verMantenimiento(id) {
@@ -8728,6 +8746,16 @@ select { pointer-events: none; }
         return filaHoy(s.descripcion, nombrePunto(s.punto) + " · urgencia " + String(s.urgencia || "Media").toLowerCase(),
           "Recibida " + fechaHora(s.creado), "sol", function () { irASeccion("solicitudes"); });
       }), "No hay solicitudes nuevas de los puntos."));
+
+    /* Solo aparece si hay alguna: son las que quedaron aceptadas y falta asignarles contratista y fecha. */
+    var porAsignar = state.solicitudes.filter(function (s) { return s.estado === SOL_POR_ASIGNAR && enPuntoElegido(s); });
+    if (porAsignar.length) {
+      wrap.appendChild(bloqueHoy("hoyPorAsignar", "Aceptadas por asignar",
+        porAsignar.map(function (s) {
+          return filaHoy(s.descripcion, nombrePunto(s.punto) + " · urgencia " + String(s.urgencia || "Media").toLowerCase(),
+            "Recibida " + fechaHora(s.creado), "sol", function () { irASeccion("solicitudes"); });
+        }), ""));
+    }
 
     var acc = document.createElement("div");
     acc.className = "hoyacciones";
