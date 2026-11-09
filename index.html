@@ -842,6 +842,10 @@ button.badge.pg-Pagado, button.badge.pg-Pagado:hover { color: var(--s-comp-fg); 
   border: 1px solid transparent;
   background: transparent;
 }
+.sop.subir { cursor: pointer; }
+.sop.subir::before { content: "+ "; }
+.sop.subir:disabled { cursor: default; opacity: .7; }
+.sop.subir:disabled::before { content: none; }
 .sop.ok {
   color: var(--accent);
   background: var(--accent-soft);
@@ -4025,15 +4029,69 @@ select { pointer-events: none; }
         a.title = "Ver " + (v.nombre || s.label);
         a.addEventListener("click", function () { verSoporte(v); });
         box.appendChild(a);
-      } else {
+      } else if (soloLectura()) {
         var sp = document.createElement("span");
         sp.className = "sop falta";
         sp.textContent = s.label;
         sp.title = "Sin " + s.label.toLowerCase();
         box.appendChild(sp);
+      } else {
+        var sub = document.createElement("button");
+        sub.type = "button";
+        sub.className = "sop falta subir";
+        sub.textContent = s.label;
+        sub.title = "Subir " + s.label.toLowerCase();
+        sub.addEventListener("click", function () { elegirSoporte(r, s, sub); });
+        box.appendChild(sub);
       }
     });
     return box;
+  }
+
+  /* Tocar un soporte que falta abre el selector; al elegir el archivo queda guardado. */
+  var sopInput = document.createElement("input");
+  sopInput.type = "file";
+  sopInput.accept = "application/pdf,image/png,image/jpeg,image/webp";
+  sopInput.hidden = true;
+  document.body.appendChild(sopInput);
+
+  function elegirSoporte(r, s, chip) {
+    sopInput.value = "";
+    sopInput.onchange = function () {
+      var archivo = sopInput.files && sopInput.files[0];
+      if (archivo) subirSoporteDirecto(r, s, chip, archivo);
+    };
+    sopInput.click();
+  }
+
+  function subirSoporteDirecto(r, s, chip, archivo) {
+    if (!sb) return sinBase();
+    if (archivo.size > 20 * 1024 * 1024) { toast("El archivo pasa de 20 MB. Elige uno más liviano."); return; }
+    var tipo = archivo.type || tipoPorNombre(archivo.name) || "application/pdf";
+    var ruta = s.key + "/" + Date.now() + "-" + rutaSegura(archivo.name);
+    var soportes = Object.assign({}, soportesPrevios(r.id) || r.soportes);
+    soportes[s.key] = { archivo: ruta, nombre: archivo.name, tipo: tipo };
+    chip.disabled = true;
+    chip.textContent = "Subiendo…";
+
+    sb.storage.from("soportes").upload(ruta, archivo, { contentType: tipo, upsert: false }).then(function (res) {
+      if (res.error) throw res.error;
+      return sb.from("mantenimientos").update({ soportes: soportes }).eq("id", r.id).select("id");
+    }).then(function (res) {
+      if (res.error || !res.data || !res.data.length) {
+        /* Si el trabajo no se actualizó, el archivo no debe quedar suelto. */
+        sb.storage.from("soportes").remove([ruta]);
+        throw res.error || new Error("sin permiso");
+      }
+      r.soportes = soportes;
+      if (fichaActual && fichaActual.id === r.id) abrirFicha(r);
+      toast("Archivo guardado: " + s.label.toLowerCase() + ".");
+      return cargarDatos();
+    }).catch(function () {
+      chip.disabled = false;
+      chip.textContent = s.label;
+      toast("No se pudo subir " + s.label.toLowerCase() + ". Revisa la conexión e intenta de nuevo.");
+    });
   }
 
   construirAdjuntos();
