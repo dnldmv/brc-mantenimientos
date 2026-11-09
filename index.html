@@ -1606,6 +1606,8 @@ table.fintabla td.num, table.fintabla th.num { text-align: right; }
 .mov .macc { grid-column: 2 / 4; display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
 .pendrow { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 10px; padding: 7px 0; border-top: 1px dashed var(--line); font-size: .82rem; }
 .pendrow span { min-width: 0; overflow-wrap: anywhere; }
+.pendacc { display: flex; flex-wrap: wrap; gap: 6px; }
+.pendaviso { margin: 0 0 12px; padding: 10px 12px; border-radius: 12px; background: var(--s-curs-bg); color: var(--s-curs-fg); font-size: .88rem; overflow-wrap: anywhere; }
 .fintipo { display: flex; margin-bottom: 14px; }
 .fintipo button { flex: 1; }
 @media (max-width: 640px) {
@@ -2618,6 +2620,24 @@ select { pointer-events: none; }
       <button type="button" class="danger" id="fichaEliminar" hidden>Eliminar</button>
       <button type="button" id="fichaEditar" hidden>Editar</button>
       <button type="button" class="primary" id="fichaCerrar">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="pendOverlay" hidden>
+  <div class="sheet">
+    <h2>Eliminar pago pendiente</h2>
+    <p class="pendaviso" id="pendTrabajo"></p>
+    <p class="finnota">
+      <b>Borrar solo el pendiente:</b> el trabajo se conserva con su costo e historial; solo deja de aparecer aquí.
+    </p>
+    <p class="finnota">
+      <b>Borrar el trabajo:</b> se elimina el trabajo con sus notas de seguimiento. No se puede deshacer.
+    </p>
+    <div class="sheet-actions">
+      <button type="button" id="pendCancelar">Cancelar</button>
+      <button type="button" class="danger" id="pendBorrarTrabajo">Borrar el trabajo</button>
+      <button type="button" class="primary" id="pendBorrarPendiente">Borrar solo el pendiente</button>
     </div>
   </div>
 </div>
@@ -5391,6 +5411,7 @@ select { pointer-events: none; }
   /* Cierra la ventana o el menú que esté encima; dice si había alguno. */
   function cerrarCapaSuperior() {
     if (!el.visorOverlay.hidden) { cerrarVisor(); return true; }
+    if (!document.getElementById("pendOverlay").hidden) { cerrarEliminarPendiente(); return true; }
     if (!el.masPanel.hidden) { abrirMas(false); return true; }
     if (!el.planOverlay.hidden) { cerrarPlan(); return true; }
     if (!el.finOverlay.hidden) { cerrarMovimiento(); return true; }
@@ -5508,7 +5529,8 @@ select { pointer-events: none; }
       observaciones: f.observaciones || "",
       soportes: f.soportes && typeof f.soportes === "object" ? f.soportes : {},
       activoId: f.activo_id || "",
-      planId: f.plan_id || ""
+      planId: f.plan_id || "",
+      pagoDescartado: f.pago_descartado === true
     };
   }
 
@@ -8036,7 +8058,7 @@ select { pointer-events: none; }
     var pagados = {};
     state.movimientos.forEach(function (m) { if (m.mantenimiento_id) pagados[m.mantenimiento_id] = true; });
     var lista = state.registros.filter(function (r) {
-      return r.estadoPago === "Pagado" && numero(r.costoReal) !== null && !pagados[r.id] && enPunto(r);
+      return r.estadoPago === "Pagado" && numero(r.costoReal) !== null && !pagados[r.id] && !r.pagoDescartado && enPunto(r);
     }).sort(function (a, b) { return String(fechaInterv(b)).localeCompare(String(fechaInterv(a))); });
     if (!lista.length) return null;
 
@@ -8057,7 +8079,11 @@ select { pointer-events: none; }
       t.textContent = fecha(fechaInterv(r)) + " · " + nombrePunto(r.punto) + " · " +
         (r.responsable || "Sin contratista") + " · " + cop(r.costoReal);
       fila.appendChild(t);
-      fila.appendChild(botonChico("Registrar pago", "primary", function () { abrirMovimiento(null, "Egreso", r.id); }));
+      var accs = document.createElement("div");
+      accs.className = "pendacc";
+      accs.appendChild(botonChico("Registrar pago", "primary", function () { abrirMovimiento(null, "Egreso", r.id); }));
+      if (!soloLectura()) accs.appendChild(botonChico("Eliminar", "danger", function () { abrirEliminarPendiente(r); }));
+      fila.appendChild(accs);
       caja.appendChild(fila);
     });
     if (lista.length > 5) {
@@ -8069,6 +8095,46 @@ select { pointer-events: none; }
     }
     return caja;
   }
+
+  /* Un pendiente siempre viene de un trabajo: antes de borrar se avisa cuál y se deja elegir. */
+  var pendActual = null;
+  var pendOverlay = document.getElementById("pendOverlay");
+
+  function abrirEliminarPendiente(r) {
+    pendActual = r;
+    document.getElementById("pendTrabajo").textContent = "Este pago está enlazado al trabajo \"" +
+      (r.descripcion || "Sin descripción") + "\" (" + nombrePunto(r.punto) + " · " +
+      (r.responsable || "Sin contratista") + " · " + cop(r.costoReal) + ").";
+    pendOverlay.hidden = false;
+  }
+
+  function cerrarEliminarPendiente() {
+    pendOverlay.hidden = true;
+    pendActual = null;
+  }
+
+  document.getElementById("pendCancelar").addEventListener("click", cerrarEliminarPendiente);
+  pendOverlay.addEventListener("click", function (ev) {
+    if (ev.target === pendOverlay) cerrarEliminarPendiente();
+  });
+  document.getElementById("pendBorrarTrabajo").addEventListener("click", function () {
+    var r = pendActual;
+    cerrarEliminarPendiente();
+    if (r) eliminar(r);
+  });
+  document.getElementById("pendBorrarPendiente").addEventListener("click", function () {
+    var r = pendActual;
+    cerrarEliminarPendiente();
+    if (!r) return;
+    if (!sb) return sinBase();
+    sb.from("mantenimientos").update({ pago_descartado: true }).eq("id", r.id).select("id").then(function (res) {
+      if (res.error) throw res.error;
+      toast(res.data && res.data.length
+        ? "Pendiente borrado. El trabajo sigue guardado."
+        : "No se pudo borrar el pendiente. Recarga la app e intenta de nuevo.");
+      return cargarDatos();
+    }).catch(fallo);
+  });
 
   function graficoMensual(lista) {
     var ing = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
