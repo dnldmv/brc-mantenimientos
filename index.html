@@ -4992,11 +4992,12 @@ select { pointer-events: none; }
     var dl = document.createElement("dl");
     dl.className = "dl";
     pareja(dl, "Responsable", r.responsable || "—", true);
-    pareja(dl, "Programada", fecha(r.fechaProgramada));
-    if (r.fechaRealizada) pareja(dl, "Realizada", fecha(r.fechaRealizada));
-    pareja(dl, "Estimado", cop(r.costoEstimado));
-    if (r.costoReal !== null && r.costoReal !== undefined && r.costoReal !== "") {
-      pareja(dl, "Ejecutado", cop(r.costoReal));
+    if (yaRealizado(r)) {
+      pareja(dl, "Fecha de ejecución", fecha(r.fechaRealizada));
+      pareja(dl, "Costo final", cop(r.costoReal));
+    } else {
+      pareja(dl, "Programada", fecha(r.fechaProgramada));
+      pareja(dl, "Estimado", cop(r.costoEstimado));
     }
     card.appendChild(dl);
 
@@ -5160,6 +5161,11 @@ select { pointer-events: none; }
     dl.appendChild(dd);
   }
 
+  /* Un trabajo ya hecho muestra su fecha de ejecución y costo final; uno por hacer, lo previsto. */
+  function yaRealizado(r) {
+    return r.estado === "Completado" || !!r.fechaRealizada;
+  }
+
   function abrirFicha(r) {
     var body = el.fichaBody;
     body.textContent = "";
@@ -5185,10 +5191,13 @@ select { pointer-events: none; }
     var plan = r.planId ? buscarPlan(r.planId) : null;
     if (plan) parFicha(dl, "Plan preventivo", textoCada(plan.cada_meses) + (plan.vigente ? "" : " · pausado"));
     parFicha(dl, "Responsable", r.responsable || "—");
-    parFicha(dl, "Fecha programada", fecha(r.fechaProgramada), true);
-    parFicha(dl, "Fecha realizada", fecha(r.fechaRealizada), true);
-    parFicha(dl, "Costo estimado", cop(r.costoEstimado), true);
-    parFicha(dl, "Costo real", cop(r.costoReal), true);
+    if (yaRealizado(r)) {
+      parFicha(dl, "Fecha de ejecución", fecha(r.fechaRealizada), true);
+      parFicha(dl, "Costo final", cop(r.costoReal), true);
+    } else {
+      parFicha(dl, "Fecha programada", fecha(r.fechaProgramada), true);
+      parFicha(dl, "Costo estimado", cop(r.costoEstimado), true);
+    }
     body.appendChild(dl);
 
     var sTit = document.createElement("p");
