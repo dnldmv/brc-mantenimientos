@@ -2898,7 +2898,7 @@ select { pointer-events: none; }
 
 <div class="overlay" id="solOverlay" hidden>
   <form class="sheet" id="solForm" novalidate>
-    <h2>Nueva solicitud</h2>
+    <h2 id="solTitulo">Nueva solicitud</h2>
     <div class="formgrid">
       <div class="f" id="solPuntoWrap">
         <label for="sPunto">Punto de venta</label>
@@ -7002,6 +7002,9 @@ select { pointer-events: none; }
 
     var acts = document.createElement("div");
     acts.className = "card-actions";
+    if (state.perfil === "coordinador") {
+      acts.appendChild(botonChico("Editar", "", function () { abrirSolicitud(s); }));
+    }
     if (state.perfil === "coordinador" && (s.estado === "Nueva" || s.estado === SOL_POR_ASIGNAR)) {
       if (s.estado === "Nueva") {
         acts.appendChild(botonChico("Aceptar, por asignar", "", function () { aceptarSolicitud(s); }));
@@ -7202,31 +7205,51 @@ select { pointer-events: none; }
 
   /* ---------- formulario de solicitud ---------- */
 
+  /* Fotos del formulario: archivos recién elegidos o, al editar, las ya guardadas ({ archivo, nombre }). */
   var solFotos = [];
+  var solEditando = null;
 
-  function abrirSolicitud() {
+  /* Sin solicitud abre una nueva; con una, la edita (solo el coordinador). */
+  function abrirSolicitud(sol) {
+    var editar = !!(sol && sol.id);
+    solEditando = editar ? sol : null;
     var esPunto = state.perfil === "punto";
     el.solError.hidden = true;
-    el.solPuntoWrap.hidden = esPunto;
-    el.s.punto.value = esPunto ? state.miPunto : (state.punto !== "todos" ? state.punto : "");
-    /* El punto y la gerencia suelen reportar siempre las mismas personas: se recuerdan. */
-    var recuerda = esPunto || state.perfil === "consulta";
-    el.s.reporta.value = recuerda ? (lee("brc.reporta") || "") : "";
-    el.s.cargo.value = recuerda ? (lee("brc.cargo") || "") : "";
-    el.s.categoria.value = "";
-    el.s.urgencia.value = "Media";
-    el.s.descripcion.value = "";
-    el.s.afecta.checked = false;
+    document.getElementById("solTitulo").textContent = editar ? "Editar solicitud" : "Nueva solicitud";
+    restaurarSolicitud();
     el.s.fotos.value = "";
-    solFotos = [];
+    if (editar) {
+      el.solPuntoWrap.hidden = false;
+      el.s.punto.value = sol.punto || "";
+      el.s.reporta.value = sol.reportado_por || "";
+      el.s.cargo.value = sol.cargo_reporta || "";
+      el.s.categoria.value = sol.categoria || "";
+      el.s.urgencia.value = sol.urgencia || "Media";
+      el.s.descripcion.value = sol.descripcion || "";
+      el.s.afecta.checked = !!sol.afecta_operacion;
+      solFotos = (Array.isArray(sol.fotos) ? sol.fotos : []).slice(0, 3);
+    } else {
+      el.solPuntoWrap.hidden = esPunto;
+      el.s.punto.value = esPunto ? state.miPunto : (state.punto !== "todos" ? state.punto : "");
+      /* El punto y la gerencia suelen reportar siempre las mismas personas: se recuerdan. */
+      var recuerda = esPunto || state.perfil === "consulta";
+      el.s.reporta.value = recuerda ? (lee("brc.reporta") || "") : "";
+      el.s.cargo.value = recuerda ? (lee("brc.cargo") || "") : "";
+      el.s.categoria.value = "";
+      el.s.urgencia.value = "Media";
+      el.s.descripcion.value = "";
+      el.s.afecta.checked = false;
+      solFotos = [];
+    }
     pintarFotos();
     el.solOverlay.hidden = false;
-    setTimeout(function () { (el.s.reporta.value ? el.s.descripcion : el.s.reporta).focus(); }, 30);
+    setTimeout(function () { (editar || el.s.reporta.value ? el.s.descripcion : el.s.reporta).focus(); }, 30);
   }
 
   function cerrarSolicitud() {
     el.solOverlay.hidden = true;
     solFotos = [];
+    solEditando = null;
   }
 
   el.solCancelar.addEventListener("click", cerrarSolicitud);
@@ -7239,7 +7262,18 @@ select { pointer-events: none; }
     solFotos.forEach(function (f, i) {
       var chip = document.createElement("span");
       chip.className = "fotochip";
-      chip.appendChild(document.createTextNode(f.name || "Foto " + (i + 1)));
+      if (f.archivo) {
+        /* Foto ya guardada: se puede ver o quitar. */
+        var ver = document.createElement("button");
+        ver.type = "button";
+        ver.className = "enlacearchivo";
+        ver.textContent = "Foto " + (i + 1);
+        ver.title = "Ver esta foto";
+        ver.addEventListener("click", function () { verSoporte(f); });
+        chip.appendChild(ver);
+      } else {
+        chip.appendChild(document.createTextNode(f.name || "Foto " + (i + 1)));
+      }
       chip.appendChild(botonChico("Quitar", "", function () {
         solFotos.splice(i, 1);
         pintarFotos();
@@ -7282,6 +7316,7 @@ select { pointer-events: none; }
 
   function subirFotos(punto) {
     return Promise.all(solFotos.map(function (archivo, i) {
+      if (archivo.archivo) return archivo;
       return reducirFoto(archivo).then(function (blob) {
         var tipo = blob.type || archivo.type || "";
         if (["image/jpeg", "image/png", "image/webp"].indexOf(tipo) === -1) throw { codigo: "tipo" };
@@ -7300,13 +7335,59 @@ select { pointer-events: none; }
 
   function restaurarSolicitud() {
     el.solEnviar.disabled = false;
-    el.solEnviar.textContent = "Enviar solicitud";
+    el.solEnviar.textContent = solEditando ? "Guardar cambios" : "Enviar solicitud";
+  }
+
+  /* Guarda los cambios de una solicitud existente. Las fotos quitadas se borran después de guardar. */
+  function guardarEdicionSolicitud(sol, punto) {
+    var s = el.s;
+    var nuevas = solFotos.filter(function (f) { return !f.archivo; }).length;
+    el.solEnviar.disabled = true;
+    el.solEnviar.textContent = nuevas ? "Subiendo fotos…" : "Guardando…";
+    el.solError.hidden = true;
+    subirFotos(punto).then(function (fotos) {
+      el.solEnviar.textContent = "Guardando…";
+      return sb.from("solicitudes").update({
+        punto: punto,
+        reportado_por: s.reporta.value.trim(),
+        cargo_reporta: s.cargo.value.trim(),
+        categoria: s.categoria.value || null,
+        descripcion: s.descripcion.value.trim(),
+        urgencia: s.urgencia.value,
+        afecta_operacion: s.afecta.checked,
+        fotos: fotos
+      }).eq("id", sol.id).select("id").then(function (res) {
+        if (res.error) throw res.error;
+        if (!res.data || !res.data.length) throw { codigo: "permiso" };
+        return fotos;
+      });
+    }).then(function (fotos) {
+      var siguen = fotos.map(function (f) { return f.archivo; });
+      var quitadas = (Array.isArray(sol.fotos) ? sol.fotos : []).filter(function (f) {
+        return f && f.archivo && siguen.indexOf(f.archivo) === -1;
+      }).map(function (f) { return f.archivo; });
+      if (quitadas.length) sb.storage.from("solicitudes").remove(quitadas);
+      cerrarSolicitud();
+      restaurarSolicitud();
+      toast("Solicitud actualizada.");
+      return cargarSolicitudes();
+    }).catch(function (e) {
+      restaurarSolicitud();
+      el.solError.textContent = e && e.codigo === "tipo"
+        ? "Una de las fotos no es JPG, PNG o WebP. Tómala de nuevo o elige otra."
+        : (e && e.codigo === "grande"
+          ? "Una de las fotos es demasiado pesada. Elige otra."
+          : (e && e.codigo === "permiso"
+            ? "No se guardaron los cambios: revisa que hayas entrado como coordinador y recarga la app."
+            : "No se pudieron guardar los cambios. Revisa la conexión e intenta de nuevo."));
+      el.solError.hidden = false;
+    });
   }
 
   el.solForm.addEventListener("submit", function (ev) {
     ev.preventDefault();
     var s = el.s;
-    var punto = state.perfil === "punto" ? state.miPunto : s.punto.value;
+    var punto = state.perfil === "punto" && !solEditando ? state.miPunto : s.punto.value;
     var faltan = [];
     if (!punto) faltan.push("el punto de venta");
     if (!s.reporta.value.trim()) faltan.push("el nombre de quien reporta");
@@ -7318,6 +7399,7 @@ select { pointer-events: none; }
       return;
     }
     if (!sb) return sinBase();
+    if (solEditando) return guardarEdicionSolicitud(solEditando, punto);
 
     el.solEnviar.disabled = true;
     el.solEnviar.textContent = solFotos.length ? "Subiendo fotos…" : "Enviando…";
