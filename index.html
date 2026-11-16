@@ -7034,8 +7034,32 @@ select { pointer-events: none; }
     } else if (state.perfil !== "punto" && s.mantenimiento_id) {
       acts.appendChild(botonChico("Ver mantenimiento", "", function () { verMantenimiento(s.mantenimiento_id); }));
     }
+    if (state.perfil === "coordinador") {
+      acts.appendChild(botonChico("Eliminar", "danger", function () { eliminarSolicitud(s); }));
+    }
     if (acts.children.length) card.appendChild(acts);
     return card;
+  }
+
+  /* Borra la solicitud y sus fotos. El trabajo creado desde ella, si lo hay, se conserva.
+     Si el servidor no deja borrar, no da error: devuelve cero filas. Hay que comprobarlo. */
+  function eliminarSolicitud(s) {
+    var aviso = "¿Eliminar esta solicitud de " + nombrePunto(s.punto) + "?\n\n“" +
+      String(s.descripcion || "Sin descripción").slice(0, 120) + "”\n\nTambién se borran sus fotos. No se puede deshacer.";
+    if (s.mantenimiento_id) aviso += "\n\nEl trabajo que se programó desde ella no se borra.";
+    if (!window.confirm(aviso)) return;
+    if (!sb) return sinBase();
+    sb.from("solicitudes").delete().eq("id", s.id).select("id").then(function (res) {
+      if (res.error) throw res.error;
+      if (!res.data || !res.data.length) {
+        toast("No se eliminó la solicitud: revisa que hayas entrado como coordinador y recarga la app.");
+        return null;
+      }
+      var fotos = (Array.isArray(s.fotos) ? s.fotos : []).map(function (f) { return f && f.archivo; }).filter(Boolean);
+      if (fotos.length) sb.storage.from("solicitudes").remove(fotos);
+      toast("Solicitud eliminada.");
+      return cargarSolicitudes();
+    }).catch(fallo);
   }
 
   /* Aceptada, pero todavía sin contratista ni fecha. Se comprueba la fila: sin permiso no hay error. */
