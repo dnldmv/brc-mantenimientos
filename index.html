@@ -2052,6 +2052,26 @@ button.metric[aria-pressed="true"] { box-shadow: inset 0 0 0 2px var(--accent); 
 .hoyhero .hh-bar i { display: block; height: 100%; border-radius: 999px; background: var(--zest); }
 .hoyhero button { align-self: flex-start; background: var(--zest); color: #0F1430; border: 0; font-weight: 600; }
 .hoyhero button:hover { background: #E4F78A; }
+/* Solicitudes dentro de la tarjeta: verde agua para resueltas, el mismo más claro en proceso, rosado para nuevas. */
+.hoyhero .hh-sol { display: flex; flex-direction: column; gap: 8px; padding-top: 12px; margin-top: 2px; border-top: 1px solid rgba(255, 255, 255, .2); }
+.hoyhero .hh-solfila { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.hoyhero .hh-chip.sol::before { background: #7FE3D4; }
+.hoyhero .hh-solpct { font-size: .92rem; color: #DCE2FF; }
+.hoyhero .hh-solpct b { font-size: 1.5rem; font-weight: 700; color: #FFFFFF; margin-right: 4px; }
+.hoyhero .hh-bar.sol { display: flex; gap: 2px; }
+.hoyhero .hh-bar.sol i { border-radius: 0; }
+.hoyhero .hh-bar.sol i:first-child { border-radius: 999px 0 0 999px; }
+.hoyhero .hh-bar.sol i:last-child { border-radius: 0 999px 999px 0; }
+.hoyhero .hh-bar.sol i:only-child { border-radius: 999px; }
+.hoyhero .hh-bar.sol .res, .hoyhero .hh-ley .res::before { background: #7FE3D4; }
+.hoyhero .hh-bar.sol .pro, .hoyhero .hh-ley .pro::before { background: #3FA89A; }
+.hoyhero .hh-bar.sol .nue, .hoyhero .hh-ley .nue::before { background: #FFA8CE; }
+.hoyhero .hh-ley { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: .8rem; color: #DCE2FF; }
+.hoyhero .hh-ley span { display: inline-flex; align-items: center; gap: 6px; }
+.hoyhero .hh-ley span::before { content: ""; width: 8px; height: 8px; border-radius: 50%; }
+.hoyhero .hh-botones { display: flex; flex-wrap: wrap; gap: 8px; }
+.hoyhero button.hh-sec { background: rgba(255, 255, 255, .16); color: #FFFFFF; }
+.hoyhero button.hh-sec:hover { background: rgba(255, 255, 255, .26); }
 .hoytile { border-radius: 20px; border: 0; padding: 14px 16px; }
 .hoytile b { font-family: var(--font-body); }
 .hoyfila, .hoyfila.vencido, .hoyfila.sol { border: 0; border-radius: 18px; padding: 12px 14px; box-shadow: var(--shadow); gap: 5px; }
@@ -9112,6 +9132,55 @@ select { pointer-events: none; }
     if (b) b.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
+  /* Solicitudes en la tarjeta de Hoy: resueltas, en proceso y nuevas, en una barra de tres tramos. */
+  function bloqueSolicitudesHoy(sols) {
+    var resueltas = sols.filter(function (s) { return s.estado === "Resuelta"; }).length;
+    var nuevas = sols.filter(function (s) { return s.estado === "Nueva"; }).length;
+    var proceso = sols.length - resueltas - nuevas;
+    var pct = Math.round(resueltas / sols.length * 100);
+
+    var box = document.createElement("div");
+    box.className = "hh-sol";
+    var fila = document.createElement("div");
+    fila.className = "hh-solfila";
+    var chip = document.createElement("span");
+    chip.className = "hh-chip sol";
+    chip.textContent = "Solicitudes";
+    var cifra = document.createElement("span");
+    cifra.className = "hh-solpct";
+    cifra.innerHTML = "<b></b> resueltas";
+    cifra.firstChild.textContent = pct + " %";
+    fila.appendChild(chip);
+    fila.appendChild(cifra);
+    box.appendChild(fila);
+
+    var barra = document.createElement("div");
+    barra.className = "hh-bar sol";
+    barra.setAttribute("role", "img");
+    barra.setAttribute("aria-label", resueltas + " resueltas, " + proceso + " en proceso y " + nuevas + " nuevas, de " + sols.length + " solicitudes");
+    [["res", resueltas], ["pro", proceso], ["nue", nuevas]].forEach(function (t) {
+      if (!t[1]) return;
+      var i = document.createElement("i");
+      i.className = t[0];
+      i.style.width = (t[1] / sols.length * 100) + "%";
+      barra.appendChild(i);
+    });
+    box.appendChild(barra);
+
+    var ley = document.createElement("div");
+    ley.className = "hh-ley";
+    [["res", resueltas, resueltas === 1 ? "resuelta" : "resueltas"],
+     ["pro", proceso, "en proceso"],
+     ["nue", nuevas, nuevas === 1 ? "nueva" : "nuevas"]].forEach(function (t) {
+      var s = document.createElement("span");
+      s.className = t[0];
+      s.textContent = t[1] + " " + t[2];
+      ley.appendChild(s);
+    });
+    box.appendChild(ley);
+    return box;
+  }
+
   function vistaHoy() {
     var wrap = document.createElement("section");
     var hoy = hoyIso();
@@ -9146,16 +9215,21 @@ select { pointer-events: none; }
     });
     var totalPagar = porPagar.reduce(function (t, r) { return t + Number(r.costoReal); }, 0);
 
-    /* Tarjeta de planes: cuántos planes activos tienen su trabajo al día. */
+    /* Tarjeta de planes: cuántos planes activos tienen su trabajo al día.
+       Debajo, en otro color, cómo van las solicitudes (las rechazadas no cuentan). */
     var planesPunto = state.planes.filter(function (p) { return p.vigente && enPuntoElegido(p); });
+    var solsPunto = state.solicitudes.filter(function (s) { return s.estado !== "Rechazada" && enPuntoElegido(s); });
+    var hero = null;
+    if (planesPunto.length || solsPunto.length) {
+      hero = document.createElement("div");
+      hero.className = "hoyhero";
+    }
     if (planesPunto.length) {
       var alDia = planesPunto.filter(function (p) {
         var ab = abiertoDePlan(p);
         return !ab || !ab.fechaProgramada || ab.fechaProgramada >= hoy;
       }).length;
       var pct = Math.round(alDia / planesPunto.length * 100);
-      var hero = document.createElement("div");
-      hero.className = "hoyhero";
       var top = document.createElement("div");
       top.className = "hh-top";
       var chip = document.createElement("span");
@@ -9180,11 +9254,27 @@ select { pointer-events: none; }
       relleno.style.width = pct + "%";
       barra.appendChild(relleno);
       hero.appendChild(barra);
-      var ver = document.createElement("button");
-      ver.type = "button";
-      ver.textContent = "Ver planes";
-      ver.addEventListener("click", function () { irASeccion("planes"); });
-      hero.appendChild(ver);
+    }
+    if (solsPunto.length) hero.appendChild(bloqueSolicitudesHoy(solsPunto));
+    if (hero) {
+      var botones = document.createElement("div");
+      botones.className = "hh-botones";
+      if (planesPunto.length) {
+        var ver = document.createElement("button");
+        ver.type = "button";
+        ver.textContent = "Ver planes";
+        ver.addEventListener("click", function () { irASeccion("planes"); });
+        botones.appendChild(ver);
+      }
+      if (solsPunto.length) {
+        var verSol = document.createElement("button");
+        verSol.type = "button";
+        verSol.className = "hh-sec";
+        verSol.textContent = "Ver solicitudes";
+        verSol.addEventListener("click", function () { irASeccion("solicitudes"); });
+        botones.appendChild(verSol);
+      }
+      hero.appendChild(botones);
       wrap.appendChild(hero);
     }
 
