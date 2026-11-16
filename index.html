@@ -9427,6 +9427,13 @@ select { pointer-events: none; }
     var porFecha = function (a, b) { return a.fechaProgramada < b.fechaProgramada ? -1 : (a.fechaProgramada > b.fechaProgramada ? 1 : 0); };
     vencidos.sort(porFecha);
     semana.sort(porFecha);
+    /* Solicitudes programadas por su cuenta (sin trabajo): también van en la agenda. */
+    var solAgenda = state.solicitudes.filter(function (s) {
+      return !s.mantenimiento_id && s.fecha_programada && enPuntoElegido(s) &&
+        (s.estado === "Programada" || s.estado === "En curso" || s.estado === SOL_ESPERA);
+    });
+    var solVencidas = solAgenda.filter(function (s) { return s.fecha_programada < hoy; });
+    var solSemana = solAgenda.filter(function (s) { return s.fecha_programada >= hoy && s.fecha_programada <= hasta; });
     var nuevas = state.solicitudes.filter(function (s) { return s.estado === "Nueva" && enPuntoElegido(s); });
     var porPagar = state.registros.filter(function (r) {
       return r.estado === "Completado" && enPuntoElegido(r) && Number(r.costoReal) > 0 && r.estadoPago !== "Pagado";
@@ -9498,9 +9505,10 @@ select { pointer-events: none; }
 
     var tiles = document.createElement("div");
     tiles.className = "hoytiles";
-    tiles.appendChild(tileHoy(String(vencidos.length), vencidos.length === 1 ? "Vencido" : "Vencidos",
-      vencidos.length ? "alerta" : "", function () { irABloque("hoyVencidos"); }));
-    tiles.appendChild(tileHoy(String(semana.length), "Próximos 7 días", "", function () { irABloque("hoySemana"); }));
+    var nVenc = vencidos.length + solVencidas.length;
+    tiles.appendChild(tileHoy(String(nVenc), nVenc === 1 ? "Vencido" : "Vencidos",
+      nVenc ? "alerta" : "", function () { irABloque("hoyVencidos"); }));
+    tiles.appendChild(tileHoy(String(semana.length + solSemana.length), "Próximos 7 días", "", function () { irABloque("hoySemana"); }));
     tiles.appendChild(tileHoy(String(nuevas.length), nuevas.length === 1 ? "Solicitud nueva" : "Solicitudes nuevas", "",
       function () { irASeccion("solicitudes"); }));
     tiles.appendChild(tileHoy(copCorto(totalPagar), "Por pagar · " + porPagar.length + (porPagar.length === 1 ? " trabajo" : " trabajos"), "",
@@ -9551,10 +9559,31 @@ select { pointer-events: none; }
       return caja;
     }
 
-    wrap.appendChild(bloqueHoy("hoyVencidos", "Vencidos",
-      vencidos.map(function (r) { return filaMant(r, true); }), "Nada vencido. Todo lo programado está al día."));
-    wrap.appendChild(bloqueHoy("hoySemana", "Próximos 7 días",
-      semana.map(filaProxima), "No hay trabajos programados para esta semana."));
+    /* Fila de una solicitud programada: lleva a Solicitudes, donde se gestiona. */
+    function filaSolHoy(s, vencido) {
+      var d = diasEntre(hoy, s.fecha_programada);
+      var cuando = vencido
+        ? "Vencida hace " + (-d) + (d === -1 ? " día" : " días") + " · " + fecha(s.fecha_programada)
+        : (d === 0 ? "Hoy" : (d === 1 ? "Mañana" : fecha(s.fecha_programada))) + " · " + s.estado;
+      var det = state.solDetalle[s.id];
+      var detalle = "Solicitud · " + nombrePunto(s.punto) + (s.categoria ? " · " + categoriaCorta(s.categoria) : "") +
+        (det && det.responsable ? " · " + det.responsable : "");
+      return filaHoy(s.descripcion || "Sin descripción", detalle, cuando, vencido ? "vencido" : "sol",
+        function () { irASeccion("solicitudes"); });
+    }
+
+    /* Trabajos y solicitudes juntos, por fecha. */
+    function porFechaFila(a, b) { return a.f < b.f ? -1 : (a.f > b.f ? 1 : 0); }
+    var filasVenc = vencidos.map(function (r) { return { f: r.fechaProgramada, el: filaMant(r, true) }; })
+      .concat(solVencidas.map(function (s) { return { f: s.fecha_programada, el: filaSolHoy(s, true) }; }))
+      .sort(porFechaFila).map(function (x) { return x.el; });
+    var filasSemana = semana.map(function (r) { return { f: r.fechaProgramada, el: filaProxima(r) }; })
+      .concat(solSemana.map(function (s) { return { f: s.fecha_programada, el: filaSolHoy(s, false) }; }))
+      .sort(porFechaFila).map(function (x) { return x.el; });
+
+    wrap.appendChild(bloqueHoy("hoyVencidos", "Vencidos", filasVenc, "Nada vencido. Todo lo programado está al día."));
+    wrap.appendChild(bloqueHoy("hoySemana", "Próximos 7 días", filasSemana,
+      "No hay trabajos ni solicitudes programados para esta semana."));
     wrap.appendChild(bloqueHoy("hoySolicitudes", "Solicitudes nuevas",
       nuevas.map(function (s) {
         return filaHoy(s.descripcion, nombrePunto(s.punto) + " · urgencia " + String(s.urgencia || "Media").toLowerCase(),
