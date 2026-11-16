@@ -1452,6 +1452,11 @@ button.lineatitulo[aria-expanded="true"]::after { transform: rotate(90deg); }
 #visorOverlay { z-index: 65; }
 /* El comprobante se pide también desde la ficha abierta. */
 #compOverlay { z-index: 50; }
+/* Confirmación antes de borrar: por encima de cualquier formulario o ficha abierta. */
+#confOverlay { z-index: 70; }
+.confsheet { max-width: 440px; }
+.conftexto p { margin: 0 0 10px; font-size: .92rem; color: var(--fg-muted); overflow-wrap: break-word; }
+.conftexto p:first-child { color: var(--fg); }
 .actresumen { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; margin-bottom: 12px; }
 .actresumen div, .hojacostos div {
   background: var(--surface);
@@ -2723,6 +2728,18 @@ select { pointer-events: none; }
       <button type="button" class="danger" id="fichaEliminar" hidden>Eliminar</button>
       <button type="button" id="fichaEditar" hidden>Editar</button>
       <button type="button" class="primary" id="fichaCerrar">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="confOverlay" hidden>
+  <div class="sheet confsheet" role="alertdialog" aria-modal="true" aria-labelledby="confTitulo" aria-describedby="confTexto">
+    <h2 id="confTitulo"></h2>
+    <p class="pendaviso" id="confCita" hidden></p>
+    <div class="conftexto" id="confTexto"></div>
+    <div class="sheet-actions">
+      <button type="button" id="confCancelar">Cancelar</button>
+      <button type="button" class="danger" id="confOk">Eliminar</button>
     </div>
   </div>
 </div>
@@ -5369,11 +5386,17 @@ select { pointer-events: none; }
 
     el.fichaEliminar.hidden = soloLectura();
     el.fichaEliminar.onclick = function () {
-      var aviso = "¿Eliminar este trabajo? También se borran sus notas de seguimiento. No se puede deshacer.";
-      if (r.planId) aviso += "\n\nViene de un plan preventivo: si no quieres que se repita, pausa también el plan.";
-      if (!window.confirm(aviso)) return;
-      cerrarFicha();
-      eliminar(r);
+      confirmar({
+        titulo: "¿Eliminar este trabajo?",
+        cita: String(r.descripcion || "Sin descripción").slice(0, 140),
+        textos: ["También se borran sus notas de seguimiento. No se puede deshacer.",
+          r.planId ? "Viene de un plan preventivo: si no quieres que se repita, pausa también el plan." : ""],
+        boton: "Eliminar trabajo",
+        accion: function () {
+          cerrarFicha();
+          eliminar(r);
+        }
+      });
     };
     el.fichaEditar.hidden = soloLectura();
     el.fichaEditar.onclick = function () {
@@ -5566,12 +5589,20 @@ select { pointer-events: none; }
   }
 
   function borrarComentario(c) {
-    if (!sb || !window.confirm("¿Borrar esta nota de la línea de tiempo?")) return;
-    sb.from("comentarios").delete().eq("id", c.id).then(function (res) {
-      if (res.error) throw res.error;
-      return cargarComentarios();
-    }).catch(function () {
-      toast("No se pudo borrar la nota.");
+    if (!sb) return;
+    confirmar({
+      titulo: "¿Borrar esta nota?",
+      cita: String(c.titulo || c.texto || "").slice(0, 140),
+      textos: ["Se quita de la línea de tiempo del trabajo. No se puede deshacer."],
+      boton: "Borrar nota",
+      accion: function () {
+        sb.from("comentarios").delete().eq("id", c.id).then(function (res) {
+          if (res.error) throw res.error;
+          return cargarComentarios();
+        }).catch(function () {
+          toast("No se pudo borrar la nota.");
+        });
+      }
     });
   }
 
@@ -5687,8 +5718,47 @@ select { pointer-events: none; }
   el.overlay.addEventListener("click", function (ev) {
     if (ev.target === el.overlay) cerrarForm();
   });
+  /* Confirmación con el estilo de la app, en lugar del aviso del navegador.
+     o: { titulo, cita (texto entre comillas, opcional), textos: [párrafos], boton, accion } */
+  var confAccion = null;
+  var confOverlay = document.getElementById("confOverlay");
+
+  function confirmar(o) {
+    confAccion = o.accion;
+    document.getElementById("confTitulo").textContent = o.titulo;
+    var cita = document.getElementById("confCita");
+    cita.hidden = !o.cita;
+    cita.textContent = o.cita ? "“" + o.cita + "”" : "";
+    var caja = document.getElementById("confTexto");
+    caja.textContent = "";
+    (o.textos || []).filter(Boolean).forEach(function (t) {
+      var p = document.createElement("p");
+      p.textContent = t;
+      caja.appendChild(p);
+    });
+    document.getElementById("confOk").textContent = o.boton || "Eliminar";
+    confOverlay.hidden = false;
+    setTimeout(function () { document.getElementById("confCancelar").focus(); }, 30);
+  }
+
+  function cerrarConfirmar() {
+    confOverlay.hidden = true;
+    confAccion = null;
+  }
+
+  document.getElementById("confCancelar").addEventListener("click", cerrarConfirmar);
+  confOverlay.addEventListener("click", function (ev) {
+    if (ev.target === confOverlay) cerrarConfirmar();
+  });
+  document.getElementById("confOk").addEventListener("click", function () {
+    var accion = confAccion;
+    cerrarConfirmar();
+    if (accion) accion();
+  });
+
   /* Cierra la ventana o el menú que esté encima; dice si había alguno. */
   function cerrarCapaSuperior() {
+    if (!confOverlay.hidden) { cerrarConfirmar(); return true; }
     if (!el.visorOverlay.hidden) { cerrarVisor(); return true; }
     if (!document.getElementById("compOverlay").hidden) { cerrarComprobante(); return true; }
     if (!document.getElementById("pendOverlay").hidden) { cerrarEliminarPendiente(); return true; }
@@ -7185,10 +7255,17 @@ select { pointer-events: none; }
   /* Borra la solicitud y sus fotos. El trabajo creado desde ella, si lo hay, se conserva.
      Si el servidor no deja borrar, no da error: devuelve cero filas. Hay que comprobarlo. */
   function eliminarSolicitud(s) {
-    var aviso = "¿Eliminar esta solicitud de " + nombrePunto(s.punto) + "?\n\n“" +
-      String(s.descripcion || "Sin descripción").slice(0, 120) + "”\n\nTambién se borran sus fotos. No se puede deshacer.";
-    if (s.mantenimiento_id) aviso += "\n\nEl trabajo que se programó desde ella no se borra.";
-    if (!window.confirm(aviso)) return;
+    confirmar({
+      titulo: "¿Eliminar esta solicitud de " + nombrePunto(s.punto) + "?",
+      cita: String(s.descripcion || "Sin descripción").slice(0, 140),
+      textos: ["También se borran sus fotos. No se puede deshacer.",
+        s.mantenimiento_id ? "El trabajo que se programó desde ella no se borra." : ""],
+      boton: "Eliminar solicitud",
+      accion: function () { borrarSolicitudConfirmada(s); }
+    });
+  }
+
+  function borrarSolicitudConfirmada(s) {
     if (!sb) return sinBase();
     sb.from("solicitudes").delete().eq("id", s.id).select("id").then(function (res) {
       if (res.error) throw res.error;
@@ -8576,19 +8653,24 @@ select { pointer-events: none; }
     var a = buscarActivo(actEditando);
     if (!a || !sb) return;
     var n = state.registros.filter(function (m) { return m.activoId === a.id; }).length;
-    var pregunta = "¿Eliminar \"" + a.nombre + "\"? " +
-      (n ? "Sus " + n + " intervenciones se conservan en los mantenimientos, sin el enlace al activo. " : "") +
-      "No se puede deshacer.";
-    if (!window.confirm(pregunta)) return;
-    sb.from("activos").delete().eq("id", a.id).then(function (res) {
-      if (res.error) throw res.error;
-      var archivos = [a.foto, a.foto_placa].filter(function (f) { return f && f.archivo; }).map(function (f) { return f.archivo; });
-      if (archivos.length) sb.storage.from("activos").remove(archivos);
-      cerrarActivo();
-      cerrarHoja();
-      toast("Activo eliminado.");
-      return cargarActivos();
-    }).catch(fallo);
+    confirmar({
+      titulo: "¿Eliminar este activo?",
+      cita: a.nombre + " · " + a.codigo,
+      textos: ["Se borran también sus fotos. No se puede deshacer.",
+        n ? "Sus " + n + " intervenciones se conservan en los mantenimientos, sin el enlace al activo." : ""],
+      boton: "Eliminar activo",
+      accion: function () {
+        sb.from("activos").delete().eq("id", a.id).then(function (res) {
+          if (res.error) throw res.error;
+          var archivos = [a.foto, a.foto_placa].filter(function (f) { return f && f.archivo; }).map(function (f) { return f.archivo; });
+          if (archivos.length) sb.storage.from("activos").remove(archivos);
+          cerrarActivo();
+          cerrarHoja();
+          toast("Activo eliminado.");
+          return cargarActivos();
+        }).catch(fallo);
+      }
+    });
   });
 
   /* ---------- finanzas: dineros recibidos y ejecutados ---------- */
@@ -9416,14 +9498,21 @@ select { pointer-events: none; }
     var m = null;
     state.movimientos.forEach(function (x) { if (x.id === finEditando) m = x; });
     if (!m || !sb) return;
-    if (!window.confirm("¿Eliminar este movimiento de " + cop(m.valor) + " (" + m.tercero + ")? No se puede deshacer.")) return;
-    sb.from("movimientos").delete().eq("id", m.id).then(function (res) {
-      if (res.error) throw res.error;
-      if (m.soporte && m.soporte.archivo) sb.storage.from("finanzas").remove([m.soporte.archivo]);
-      cerrarMovimiento();
-      toast("Movimiento eliminado.");
-      return cargarMovimientos();
-    }).catch(fallo);
+    confirmar({
+      titulo: "¿Eliminar este movimiento?",
+      cita: (m.tipo === "Ingreso" ? "Ingreso" : "Pago") + " de " + cop(m.valor) + " · " + m.tercero,
+      textos: ["Se borra también su soporte. No se puede deshacer."],
+      boton: "Eliminar movimiento",
+      accion: function () {
+        sb.from("movimientos").delete().eq("id", m.id).then(function (res) {
+          if (res.error) throw res.error;
+          if (m.soporte && m.soporte.archivo) sb.storage.from("finanzas").remove([m.soporte.archivo]);
+          cerrarMovimiento();
+          toast("Movimiento eliminado.");
+          return cargarMovimientos();
+        }).catch(fallo);
+      }
+    });
   });
 
   /* ---------- hoy: lo que toca atender ---------- */
@@ -10017,21 +10106,29 @@ select { pointer-events: none; }
     var p = buscarPlan(planEditando);
     if (!p || !sb) return;
     var abierto = abiertoDePlan(p);
-    if (!window.confirm("¿Eliminar el plan \"" + p.descripcion + "\"? " +
-      (abierto ? "También se quita el mantenimiento que tenía programado. " : "") +
-      "Los ya completados se conservan. No se puede deshacer.")) return;
-    var quitar = abierto
-      ? sb.from("mantenimientos").delete().eq("id", abierto.id)
-      : Promise.resolve({});
-    quitar.then(function (res) {
-      if (res && res.error) throw res.error;
-      return sb.from("planes").delete().eq("id", p.id);
-    }).then(function (res) {
-      if (res.error) throw res.error;
-      cerrarPlan();
-      toast("Plan eliminado.");
-      return Promise.all([cargarPlanes(), cargarDatos()]);
-    }).catch(fallo);
+    confirmar({
+      titulo: "¿Eliminar este plan preventivo?",
+      cita: String(p.descripcion || "").slice(0, 140),
+      textos: [
+        abierto ? "También se quita el mantenimiento que tenía programado." : "",
+        "Los ya completados se conservan. No se puede deshacer."
+      ],
+      boton: "Eliminar plan",
+      accion: function () {
+        var quitar = abierto
+          ? sb.from("mantenimientos").delete().eq("id", abierto.id)
+          : Promise.resolve({});
+        quitar.then(function (res) {
+          if (res && res.error) throw res.error;
+          return sb.from("planes").delete().eq("id", p.id);
+        }).then(function (res) {
+          if (res.error) throw res.error;
+          cerrarPlan();
+          toast("Plan eliminado.");
+          return Promise.all([cargarPlanes(), cargarDatos()]);
+        }).catch(fallo);
+      }
+    });
   });
 
   /* ---------- datos ---------- */
