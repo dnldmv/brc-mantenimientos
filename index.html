@@ -802,6 +802,18 @@ button.badge.pagobtn:hover {
   white-space: nowrap;
 }
 button.badge.pagobtn::after { content: "▾"; margin-left: 5px; }
+/* Estado de la solicitud como botón: conserva el color de su estado. */
+button.badge.solestbtn {
+  width: auto;
+  min-height: 0;
+  border: 1px solid transparent;
+  cursor: pointer;
+  font-family: inherit;
+  white-space: nowrap;
+}
+button.badge.solestbtn:hover { filter: brightness(1.08); }
+button.badge.solestbtn.st-Espera { border: 1px dashed currentColor; }
+button.badge.solestbtn::after { content: "▾"; margin-left: 5px; }
 button.badge.pg-Pendiente, button.badge.pg-Pendiente:hover { color: var(--s-pend-fg); }
 button.badge.pg-Remitido, button.badge.pg-Remitido:hover { color: var(--s-prog-fg); }
 button.badge.pg-Pagado, button.badge.pg-Pagado:hover { color: var(--s-comp-fg); }
@@ -3232,6 +3244,8 @@ select { pointer-events: none; }
     solicitudes: [],
     solCargadas: false,
     solFiltro: "abiertas",
+    solCat: "todas",
+    solDetalle: {},
     uid: null,
     activos: [],
     actCargados: false,
@@ -6792,6 +6806,9 @@ select { pointer-events: none; }
         if (state.solFiltro === "cerradas") return SOL_ABIERTAS.indexOf(s.estado) === -1;
         return true;
       });
+      if (state.solCat !== "todas") {
+        lista = lista.filter(function (s) { return (s.categoria || "sin") === state.solCat; });
+      }
     }
     lista.sort(function (a, b) {
       var na = a.estado === "Nueva" ? 0 : (a.estado === SOL_POR_ASIGNAR ? 1 : 2);
@@ -6831,6 +6848,7 @@ select { pointer-events: none; }
       wrap.appendChild(guia);
     } else {
       wrap.appendChild(filtrosSolicitud());
+      wrap.appendChild(categoriasSolicitud());
     }
 
     var av = bloqueAvisos();
@@ -6969,6 +6987,28 @@ select { pointer-events: none; }
     return box;
   }
 
+  /* Filtro por categoría, debajo del de estado. Solo aparece "Sin categoría" si hay alguna así. */
+  function categoriasSolicitud() {
+    var box = document.createElement("div");
+    box.className = "viewtoggle solfiltros solcats";
+    box.setAttribute("role", "group");
+    box.setAttribute("aria-label", "Categoría de las solicitudes");
+    var opciones = [["todas", "Todas las categorías"]].concat(CATEGORIAS.map(function (c) { return [c.id, c.corto]; }));
+    if (state.solicitudes.some(function (s) { return !s.categoria; })) opciones.push(["sin", "Sin categoría"]);
+    opciones.forEach(function (par) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.textContent = par[1];
+      b.setAttribute("aria-pressed", state.solCat === par[0] ? "true" : "false");
+      b.addEventListener("click", function () {
+        state.solCat = par[0];
+        render();
+      });
+      box.appendChild(b);
+    });
+    return box;
+  }
+
   function filtrosSolicitud() {
     var box = document.createElement("div");
     box.className = "viewtoggle solfiltros";
@@ -7013,7 +7053,10 @@ select { pointer-events: none; }
 
     var bs = document.createElement("div");
     bs.className = "badges";
-    bs.appendChild(badge(s.estado, SOL_CLASS[s.estado] || "neutral"));
+    /* El coordinador cambia el estado desde la etiqueta; las enlazadas a un trabajo siguen al trabajo. */
+    bs.appendChild(state.perfil === "coordinador" && !s.mantenimiento_id
+      ? estadoSolicitudDe(s)
+      : badge(s.estado, SOL_CLASS[s.estado] || "neutral"));
     bs.appendChild(badge("Urgencia " + String(s.urgencia || "Media").toLowerCase(), "prio-" + (s.urgencia || "Media")));
     if (s.afecta_operacion) bs.appendChild(badge("Impide operar", "st-Pendiente"));
     if (s.categoria) bs.appendChild(badge(categoriaCorta(s.categoria), "neutral"));
@@ -7026,6 +7069,12 @@ select { pointer-events: none; }
     pareja(dl, "Enviada", fechaHora(s.creado) || "—");
     if (s.fecha_programada) pareja(dl, "Programada", fecha(s.fecha_programada));
     if (s.prioridad) pareja(dl, "Prioridad", s.prioridad, true);
+    var det = state.perfil !== "punto" ? state.solDetalle[s.id] : null;
+    if (det) {
+      if (det.responsable) pareja(dl, "Responsable", det.responsable, true);
+      if (det.costo_estimado !== null && det.costo_estimado !== undefined) pareja(dl, "Costo estimado", cop(det.costo_estimado));
+      if (det.activo_id) pareja(dl, "Activo", nombreActivo(det.activo_id), true);
+    }
     card.appendChild(dl);
 
     /* Lo que el coordinador le dice al punto: por qué está en espera, por qué no procede, o un mensaje. */
@@ -7070,7 +7119,9 @@ select { pointer-events: none; }
         acts.appendChild(botonChico("Reanudar", "primary", function () { reanudarSolicitud(s); }));
       }
       if (abierta && !s.mantenimiento_id) {
-        acts.appendChild(botonChico("Programar", s.estado === SOL_ESPERA ? "" : "primary", function () { abrirProgramar(s, "programar"); }));
+        var yaProg = s.estado === "Programada" || s.estado === "En curso";
+        acts.appendChild(botonChico(yaProg ? "Reprogramar" : "Programar", s.estado === SOL_ESPERA || yaProg ? "" : "primary",
+          function () { abrirProgramar(s, "programar"); }));
       }
       if (abierta && s.estado !== "Nueva" && s.estado !== SOL_ESPERA) {
         acts.appendChild(botonChico("En espera", "", function () { abrirProgramar(s, "espera"); }));
@@ -7300,6 +7351,16 @@ select { pointer-events: none; }
   function cargarSolicitudes() {
     if (!sb) return Promise.resolve();
     if (state.perfil === "punto" && prevPunto.punto === state.miPunto) cargarPreventivosPunto();
+    /* Responsable, costo y activo: solo coordinador y gerencia los pueden leer. */
+    if (state.perfil !== "punto") {
+      sb.from("solicitudes_detalle").select("*").then(function (r) {
+        if (r.error) return;
+        var mapa = {};
+        (r.data || []).forEach(function (d) { mapa[d.solicitud_id] = d; });
+        state.solDetalle = mapa;
+        render();
+      });
+    }
     return sb.from("solicitudes").select("*").order("creado", { ascending: false }).then(function (res) {
       if (res.error) throw res.error;
       var primera = !state.solCargadas;
@@ -7567,18 +7628,21 @@ select { pointer-events: none; }
     var programar = modo === "programar";
     solEnCurso = s;
     progModo = modo;
-    el.progTitulo.textContent = m.titulo;
+    /* Reprogramar: el formulario trae lo que ya tenía la solicitud. */
+    var ya = programar && s.estado === "Programada";
+    var det = state.solDetalle[s.id] || {};
+    el.progTitulo.textContent = ya ? "Reprogramar solicitud" : m.titulo;
     el.progResumen.textContent = nombrePunto(s.punto) + " · " + (s.descripcion || "");
     Array.prototype.forEach.call(el.progForm.querySelectorAll(".soloprog"), function (n) { n.hidden = !programar; });
     Array.prototype.forEach.call(el.progForm.querySelectorAll(".solocierre"), function (n) { n.hidden = modo !== "noprocede"; });
     p.categoria.value = s.categoria || "";
-    p.prioridad.value = s.urgencia || "Media";
-    llenarActivos(p.activo, s.punto, "");
-    p.fecha.value = "";
-    p.responsable.value = "";
-    p.costo.value = "";
+    p.prioridad.value = s.prioridad || s.urgencia || "Media";
+    llenarActivos(p.activo, s.punto, programar ? (det.activo_id || "") : "");
+    p.fecha.value = programar ? (s.fecha_programada || "") : "";
+    p.responsable.value = programar ? (det.responsable || "") : "";
+    p.costo.value = programar && det.costo_estimado !== null && det.costo_estimado !== undefined ? det.costo_estimado : "";
     p.motivo.value = "";
-    p.respuesta.value = "";
+    p.respuesta.value = ya ? (s.respuesta || "") : "";
     p.respuesta.placeholder = modo === "espera" ? "Ej.: Permiso del centro comercial para trabajar de noche."
       : (modo === "noprocede" ? "Ej.: Ya existe la solicitud del 3 de noviembre por lo mismo." : "Ej.: El técnico pasa el jueves en la mañana.");
     p.respuestaLabel.textContent = m.etiqueta;
@@ -7659,56 +7723,89 @@ select { pointer-events: none; }
 
     el.progGuardar.disabled = true;
     el.progGuardar.textContent = "Programando…";
-    /* fechaHora() termina en "p. m.": se separa con " · " para no repetir el punto. */
-    var origen = "Solicitud de " + nombrePunto(s.punto) +
-      (s.reportado_por ? " (" + quienReporta(s) + ")" : "") +
-      " · enviada el " + fechaHora(s.creado) +
-      (s.afecta_operacion ? " · Impide operar" : "");
 
-    /* Se crea el mantenimiento correctivo y la solicitud queda enlazada a él. */
-    sb.from("mantenimientos").insert({
-      punto: s.punto,
-      categoria: p.categoria.value,
-      descripcion: s.descripcion,
-      tipo: "Correctivo",
-      prioridad: p.prioridad.value,
-      estado: "Programado",
-      estado_pago: "Pendiente",
+    /* La solicitud se programa sola, sin crear un trabajo. Responsable, costo y activo van
+       en solicitudes_detalle, que el punto no puede leer. */
+    sb.from("solicitudes_detalle").upsert({
+      solicitud_id: s.id,
       responsable: p.responsable.value.trim(),
-      fecha_programada: p.fecha.value,
-      fecha_realizada: null,
       costo_estimado: p.costo.value === "" ? null : Number(p.costo.value),
-      costo_real: null,
-      soportes: {},
       activo_id: p.activo.value || null
-    }).select("id").single().then(function (res) {
+    }).select("solicitud_id").then(function (res) {
       if (res.error) throw res.error;
-      /* De dónde salió el trabajo queda como su primera nota. */
-      sb.from("comentarios").insert({
-        mantenimiento_id: res.data.id,
-        titulo: "Programado desde una solicitud",
-        texto: origen
-      }).then(cargarComentarios);
+      if (!res.data || !res.data.length) throw { codigo: "permiso" };
       return sb.from("solicitudes").update({
         estado: "Programada",
+        categoria: p.categoria.value,
         prioridad: p.prioridad.value,
         fecha_programada: p.fecha.value,
-        respuesta: p.respuesta.value.trim(),
-        mantenimiento_id: res.data.id
-      }).eq("id", s.id);
+        respuesta: p.respuesta.value.trim()
+      }).eq("id", s.id).select("id");
     }).then(function (res) {
-      if (res && res.error) throw res.error;
+      if (res.error) throw res.error;
+      if (!res.data || !res.data.length) throw { codigo: "permiso" };
       var cuando = fecha(p.fecha.value);
       restaurarProgramar();
       cerrarProgramar();
-      toast("Solicitud programada para el " + cuando + ". Ya está en los mantenimientos.");
-      cargarDatos();
+      toast("Solicitud programada para el " + cuando + ".");
       return cargarSolicitudes();
     }).catch(function (e) {
       restaurarProgramar();
+      if (e && e.codigo === "permiso") {
+        return errorProgramar("No se guardó: revisa que hayas entrado como coordinador y recarga la app.");
+      }
       fallo(e);
     });
   });
+
+  /* Estado de la solicitud como botón: abre la lista y cambia el estado. Si el nuevo estado
+     necesita datos (fecha, motivo), abre su formulario. */
+  function estadoSolicitudDe(s) {
+    var b = document.createElement("button");
+    b.type = "button";
+    b.className = "badge solestbtn " + (SOL_CLASS[s.estado] || "neutral");
+    b.textContent = s.estado;
+    b.title = "Cambiar el estado de la solicitud";
+    b.setAttribute("aria-haspopup", "listbox");
+    var sel = document.createElement("select");
+    sel.setAttribute("aria-label", "Estado de la solicitud");
+    ESTADOS_SOL.forEach(function (e) {
+      var op = document.createElement("option");
+      op.value = e;
+      op.textContent = e;
+      sel.appendChild(op);
+    });
+    sel.addEventListener("change", function () {
+      var nuevo = sel.value;
+      if (nuevo === s.estado) return;
+      if (nuevo === "Programada") return abrirProgramar(s, "programar");
+      if (nuevo === SOL_ESPERA) return abrirProgramar(s, "espera");
+      if (nuevo === SOL_NO_PROCEDE) return abrirProgramar(s, "noprocede");
+      cambiarEstadoSolicitud(s, nuevo);
+    });
+    b.addEventListener("click", function () {
+      var u = desp.ultimo;
+      if (u && u.sel === sel && Date.now() - u.hora < 350) return;
+      sel.value = s.estado;
+      abrirDesplegable(sel, b);
+    });
+    return b;
+  }
+
+  function cambiarEstadoSolicitud(s, estado) {
+    if (!sb) return sinBase();
+    var cambios = { estado: estado };
+    /* Al salir de "En espera" o "No procede" ya no aplica su motivo. */
+    if (s.estado === SOL_ESPERA || s.estado === SOL_NO_PROCEDE) cambios.respuesta = "";
+    if (s.estado === SOL_NO_PROCEDE) cambios.motivo_cierre = null;
+    sb.from("solicitudes").update(cambios).eq("id", s.id).select("id").then(function (res) {
+      if (res.error) throw res.error;
+      toast(res.data && res.data.length
+        ? "Solicitud: " + estado.toLowerCase() + "."
+        : "No se cambió el estado: revisa que hayas entrado como coordinador y recarga la app.");
+      return cargarSolicitudes();
+    }).catch(fallo);
+  }
 
   /* ---------- hoja de vida de activos ---------- */
 
