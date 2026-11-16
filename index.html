@@ -2902,6 +2902,18 @@ select { pointer-events: none; }
         <label for="aVida">Vida útil estimada (años)</label>
         <input id="aVida" type="number" min="0.5" max="100" step="0.5" inputmode="decimal" placeholder="Ej. 10">
       </div>
+      <div class="f">
+        <label for="aCondicion">Condición física</label>
+        <select id="aCondicion"></select>
+      </div>
+      <div class="f">
+        <label for="aReposicion">Valor de reposición (COP)</label>
+        <input id="aReposicion" type="number" min="0" step="1000" inputmode="numeric" placeholder="Lo que costaría hoy uno nuevo">
+      </div>
+      <div class="f">
+        <label for="aValorActual">Valor actual estimado (COP)</label>
+        <input id="aValorActual" type="number" min="0" step="1000" inputmode="numeric" placeholder="0">
+      </div>
       <div class="f wide">
         <label for="aEspec">Características técnicas</label>
         <textarea id="aEspec" maxlength="4000" placeholder="Una por línea. Ej.:&#10;Capacidad: 24.000 BTU&#10;Voltaje: 220 V"></textarea>
@@ -2911,9 +2923,14 @@ select { pointer-events: none; }
         <textarea id="aNotas" maxlength="4000" placeholder="Accesorios, condiciones de la garantía, contacto del técnico…"></textarea>
       </div>
       <div class="f wide">
-        <label for="aFoto">Foto del activo o de su placa</label>
+        <label for="aFoto">Foto del activo</label>
         <input type="file" id="aFoto" accept="image/*">
         <span class="hint" id="aFotoHint">Opcional.</span>
+      </div>
+      <div class="f wide">
+        <label for="aFotoPlaca">Foto de la placa o etiqueta</label>
+        <input type="file" id="aFotoPlaca" accept="image/*">
+        <span class="hint" id="aFotoPlacaHint">Opcional. La de los datos técnicos y el serial.</span>
       </div>
     </div>
     <div class="formerror" id="actError" hidden></div>
@@ -3197,6 +3214,18 @@ select { pointer-events: none; }
   /* Hoja de vida de los activos. */
   var ESTADOS_ACT = ["Operativo", "En reparación", "Fuera de servicio", "Dado de baja"];
   var AC_CLASS = { "Operativo": "ac-ok", "En reparación": "ac-rep", "Fuera de servicio": "ac-fuera", "Dado de baja": "ac-baja" };
+  /* Condición física observada en el inventario, aparte del estado operativo. */
+  var CONDICIONES = [
+    { value: "Bueno", label: "Buen estado", cls: "ac-ok" },
+    { value: "Regular", label: "Estado regular", cls: "ac-rep" },
+    { value: "Malo", label: "Mal estado", cls: "ac-fuera" }
+  ];
+  function badgeCondicion(c) {
+    for (var i = 0; i < CONDICIONES.length; i++) {
+      if (CONDICIONES[i].value === c) return badge(CONDICIONES[i].label, CONDICIONES[i].cls);
+    }
+    return null;
+  }
   var SIGLA_PUNTO = { "brc-41": "B41", "brc-unico": "UNI", "brc-viva-baq": "VIV", "brc-sincelejo": "SIN", "brc-carnaval": "CAR" };
   var SIGLA_CAT = { humos: "COC", aire: "AIR", plagas: "PLA", infra: "INF" };
 
@@ -3454,7 +3483,12 @@ select { pointer-events: none; }
       espec: document.getElementById("aEspec"),
       notas: document.getElementById("aNotas"),
       foto: document.getElementById("aFoto"),
-      fotoHint: document.getElementById("aFotoHint")
+      fotoHint: document.getElementById("aFotoHint"),
+      condicion: document.getElementById("aCondicion"),
+      reposicion: document.getElementById("aReposicion"),
+      valorActual: document.getElementById("aValorActual"),
+      fotoPlaca: document.getElementById("aFotoPlaca"),
+      fotoPlacaHint: document.getElementById("aFotoPlacaHint")
     },
     f: {
       punto: document.getElementById("fPunto"),
@@ -7820,6 +7854,8 @@ select { pointer-events: none; }
   fillSelect(el.a.punto, PUNTOS.map(function (p) { return { value: p.id, label: p.nombre }; }), "Elige el punto");
   fillSelect(el.a.categoria, CATEGORIAS.map(function (c) { return { value: c.id, label: c.corto }; }), "Elige la categoría");
   fillSelect(el.a.estado, ESTADOS_ACT.map(function (e) { return { value: e, label: e }; }));
+  fillSelect(el.a.condicion, CONDICIONES, "Sin evaluar");
+  mejorarArchivo(el.a.fotoPlaca, "Elegir foto");
 
   function cargarActivos() {
     if (!sb) return Promise.resolve();
@@ -8062,16 +8098,23 @@ select { pointer-events: none; }
     var compra = 0;
     var gasto = 0;
     var alFinal = 0;
+    var actual = 0;
+    var conActual = 0;
     lista.forEach(function (a) {
       var r = resumenActivo(a);
       compra += numero(a.costo_compra) || 0;
       gasto += r.ejecutado;
+      if (numero(a.valor_actual) !== null) {
+        actual += numero(a.valor_actual);
+        conActual++;
+      }
       if (r.pct !== null && r.pct >= 0.9 && a.estado !== "Dado de baja") alFinal++;
     });
     var box = document.createElement("div");
     box.className = "actresumen";
     box.appendChild(cajaDato("Activos", String(lista.length)));
     box.appendChild(cajaDato("Valor de compra", cop(compra)));
+    if (conActual) box.appendChild(cajaDato("Valor actual estimado", cop(actual)));
     box.appendChild(cajaDato("Gasto en intervenciones", cop(gasto)));
     box.appendChild(cajaDato("Al final de su vida útil", String(alFinal), alFinal ? "alerta" : ""));
     return box;
@@ -8149,6 +8192,8 @@ select { pointer-events: none; }
     var bs = document.createElement("div");
     bs.className = "badges";
     bs.appendChild(badge(a.estado, AC_CLASS[a.estado] || "neutral"));
+    var condT = badgeCondicion(a.condicion);
+    if (condT) bs.appendChild(condT);
     bs.appendChild(badge(categoriaCorta(a.categoria), "neutral"));
     if (r.garantia === "vigente") bs.appendChild(badge("En garantía", "st-Programado"));
     card.appendChild(bs);
@@ -8158,7 +8203,9 @@ select { pointer-events: none; }
     var dl = document.createElement("dl");
     dl.className = "dl";
     if (a.marca || a.modelo) pareja(dl, "Equipo", [a.marca, a.modelo].filter(Boolean).join(" "), true);
-    pareja(dl, "Compra", cop(a.costo_compra));
+    /* Sin factura de compra, se muestra el valor actual estimado del inventario. */
+    if (numero(a.costo_compra) !== null || numero(a.valor_actual) === null) pareja(dl, "Compra", cop(a.costo_compra));
+    if (numero(a.valor_actual) !== null) pareja(dl, "Valor actual", cop(a.valor_actual));
     pareja(dl, "Intervenciones", r.interv.length + " · " + cop(r.ejecutado));
     pareja(dl, "Última", r.ultima ? fecha(r.ultima) : "—");
     if (r.proxima) pareja(dl, "Próxima", fecha(r.proxima));
@@ -8221,6 +8268,8 @@ select { pointer-events: none; }
     var bs = document.createElement("div");
     bs.className = "badges";
     bs.appendChild(badge(a.estado, AC_CLASS[a.estado] || "neutral"));
+    var condH = badgeCondicion(a.condicion);
+    if (condH) bs.appendChild(condH);
     bs.appendChild(badge(categoriaCorta(a.categoria), "neutral"));
     if (r.garantia) bs.appendChild(badge("Garantía " + r.garantia, r.garantia === "vigente" ? "st-Programado" : "neutral"));
     body.appendChild(bs);
@@ -8236,16 +8285,20 @@ select { pointer-events: none; }
     parFicha(dl, "Proveedor", a.proveedor || "—");
     body.appendChild(dl);
 
-    if (a.foto && a.foto.archivo) {
+    /* Foto del equipo y de su placa, si las tiene. */
+    var fotos = [[a.foto, "Ver foto"], [a.foto_placa, "Ver placa"]].filter(function (f) { return f[0] && f[0].archivo; });
+    if (fotos.length) {
       var fb = document.createElement("div");
       fb.className = "soportes";
       fb.style.marginTop = "10px";
-      var fbtn = document.createElement("button");
-      fbtn.type = "button";
-      fbtn.className = "sop ok";
-      fbtn.textContent = "Ver foto";
-      fbtn.addEventListener("click", function () { verSoporte(a.foto); });
-      fb.appendChild(fbtn);
+      fotos.forEach(function (f) {
+        var fbtn = document.createElement("button");
+        fbtn.type = "button";
+        fbtn.className = "sop ok";
+        fbtn.textContent = f[1];
+        fbtn.addEventListener("click", function () { verSoporte(f[0]); });
+        fb.appendChild(fbtn);
+      });
       body.appendChild(fb);
     }
 
@@ -8270,6 +8323,8 @@ select { pointer-events: none; }
     cs.appendChild(cajaDato("Total intervenciones", cop(r.ejecutado)));
     cs.appendChild(cajaDato("Costo total (compra + intervenciones)", cop((compra || 0) + r.ejecutado), "total"));
     if (r.valorLibros !== null) cs.appendChild(cajaDato("Valor en libros estimado", cop(r.valorLibros)));
+    if (numero(a.valor_reposicion) !== null) cs.appendChild(cajaDato("Valor de reposición", cop(a.valor_reposicion)));
+    if (numero(a.valor_actual) !== null) cs.appendChild(cajaDato("Valor actual estimado", cop(a.valor_actual)));
     if (r.porEjecutar) cs.appendChild(cajaDato("Programado por ejecutar", cop(r.porEjecutar)));
     body.appendChild(cs);
 
@@ -8382,9 +8437,17 @@ select { pointer-events: none; }
     x.vida.value = a && numero(a.vida_util_anios) !== null ? numero(a.vida_util_anios) : "";
     x.espec.value = a ? a.especificaciones : "";
     x.notas.value = a ? a.notas : "";
+    x.condicion.value = a && a.condicion ? a.condicion : "";
+    x.reposicion.value = a && numero(a.valor_reposicion) !== null ? numero(a.valor_reposicion) : "";
+    x.valorActual.value = a && numero(a.valor_actual) !== null ? numero(a.valor_actual) : "";
     x.foto.value = "";
     pintarArchivo(x.foto);
     x.fotoHint.textContent = a && a.foto ? "Ya tiene foto: si eliges otra, la reemplaza." : "Opcional.";
+    x.fotoPlaca.value = "";
+    pintarArchivo(x.fotoPlaca);
+    x.fotoPlacaHint.textContent = a && a.foto_placa
+      ? "Ya tiene foto de la placa: si eliges otra, la reemplaza."
+      : "Opcional. La de los datos técnicos y el serial.";
     el.actEliminar.hidden = !a;
     el.actError.hidden = true;
     el.actOverlay.hidden = false;
@@ -8450,25 +8513,35 @@ select { pointer-events: none; }
       garantia_hasta: x.garantia.value || null,
       vida_util_anios: vida,
       especificaciones: x.espec.value.trim(),
-      notas: x.notas.value.trim()
+      notas: x.notas.value.trim(),
+      condicion: x.condicion.value || null,
+      valor_reposicion: x.reposicion.value === "" ? null : Number(x.reposicion.value),
+      valor_actual: x.valorActual.value === "" ? null : Number(x.valorActual.value)
     };
 
     el.actGuardar.disabled = true;
     el.actGuardar.textContent = "Guardando…";
     el.actError.hidden = true;
 
-    var archivo = x.foto.files && x.foto.files[0];
-    var subida = !archivo ? Promise.resolve() : reducirFoto(archivo).then(function (blob) {
-      var tipo = blob.type || archivo.type || "";
-      if (["image/jpeg", "image/png", "image/webp"].indexOf(tipo) === -1) throw { codigo: "tipo" };
-      var ext = tipo === "image/png" ? ".png" : (tipo === "image/webp" ? ".webp" : ".jpg");
-      var nombre = rutaSegura(String(archivo.name || "foto").replace(/\.[^.]+$/, "")) + ext;
-      var ruta = fila.punto + "/" + Date.now() + "-" + nombre;
-      return sb.storage.from("activos").upload(ruta, blob, { contentType: tipo, upsert: false }).then(function (res) {
-        if (res.error) throw res.error;
-        fila.foto = { archivo: ruta, nombre: nombre, tipo: tipo, bucket: "activos" };
+    /* Foto del activo y foto de la placa: se reducen y se suben al almacenamiento de activos. */
+    function subirFotoActivo(archivo, campo, sufijo) {
+      if (!archivo) return Promise.resolve();
+      return reducirFoto(archivo).then(function (blob) {
+        var tipo = blob.type || archivo.type || "";
+        if (["image/jpeg", "image/png", "image/webp"].indexOf(tipo) === -1) throw { codigo: "tipo" };
+        var ext = tipo === "image/png" ? ".png" : (tipo === "image/webp" ? ".webp" : ".jpg");
+        var nombre = rutaSegura(String(archivo.name || "foto").replace(/\.[^.]+$/, "")) + sufijo + ext;
+        var ruta = fila.punto + "/" + Date.now() + "-" + nombre;
+        return sb.storage.from("activos").upload(ruta, blob, { contentType: tipo, upsert: false }).then(function (res) {
+          if (res.error) throw res.error;
+          fila[campo] = { archivo: ruta, nombre: nombre, tipo: tipo, bucket: "activos" };
+        });
       });
-    });
+    }
+    var subida = Promise.all([
+      subirFotoActivo(x.foto.files && x.foto.files[0], "foto", ""),
+      subirFotoActivo(x.fotoPlaca.files && x.fotoPlaca.files[0], "foto_placa", "-placa")
+    ]);
 
     var id = actEditando;
     subida.then(function () {
@@ -8480,6 +8553,9 @@ select { pointer-events: none; }
       /* La foto anterior se borra cuando se reemplaza. */
       if (fila.foto && previo && previo.foto && previo.foto.archivo) {
         sb.storage.from("activos").remove([previo.foto.archivo]);
+      }
+      if (fila.foto_placa && previo && previo.foto_placa && previo.foto_placa.archivo) {
+        sb.storage.from("activos").remove([previo.foto_placa.archivo]);
       }
       restaurarActivo();
       cerrarActivo();
@@ -8506,7 +8582,8 @@ select { pointer-events: none; }
     if (!window.confirm(pregunta)) return;
     sb.from("activos").delete().eq("id", a.id).then(function (res) {
       if (res.error) throw res.error;
-      if (a.foto && a.foto.archivo) sb.storage.from("activos").remove([a.foto.archivo]);
+      var archivos = [a.foto, a.foto_placa].filter(function (f) { return f && f.archivo; }).map(function (f) { return f.archivo; });
+      if (archivos.length) sb.storage.from("activos").remove(archivos);
       cerrarActivo();
       cerrarHoja();
       toast("Activo eliminado.");
