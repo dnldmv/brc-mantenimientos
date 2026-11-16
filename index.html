@@ -785,6 +785,7 @@ main .band-inner { padding-block: 12px 56px; }
 .badge.st-Pendiente { background: var(--s-pend-bg); color: var(--s-pend-fg); }
 .badge.st-Programado { background: var(--s-prog-bg); color: var(--s-prog-fg); }
 .badge.st-PorAsignar { background: var(--zest); color: #0F1430; }
+.badge.st-Espera { background: transparent; color: var(--s-curs-fg); border: 1px dashed currentColor; }
 .badge.st-EnCurso { background: var(--s-curs-bg); color: var(--s-curs-fg); }
 .badge.st-Completado { background: var(--s-comp-bg); color: var(--s-comp-fg); }
 .badge.neutral { background: var(--surface-2); color: var(--fg-muted); }
@@ -2991,6 +2992,10 @@ select { pointer-events: none; }
         <label for="pCosto">Costo estimado (COP)</label>
         <input id="pCosto" type="number" min="0" step="1000" inputmode="numeric" placeholder="0">
       </div>
+      <div class="f wide solocierre">
+        <label for="pMotivo">Motivo</label>
+        <select id="pMotivo" aria-label="Motivo"></select>
+      </div>
       <div class="f wide">
         <label for="pRespuesta" id="pRespuestaLabel">Mensaje para el punto (opcional)</label>
         <textarea id="pRespuesta" maxlength="2000" placeholder="Ej.: El técnico pasa el jueves en la mañana."></textarea>
@@ -3125,17 +3130,43 @@ select { pointer-events: none; }
   };
 
   /* Solicitudes que los puntos envían cuando algo se daña. */
-  var SOL_POR_ASIGNAR = "Aceptada por asignar";
-  var ESTADOS_SOL = ["Nueva", SOL_POR_ASIGNAR, "Programada", "En curso", "Resuelta", "Rechazada"];
-  var SOL_ABIERTAS = ["Nueva", SOL_POR_ASIGNAR, "Programada", "En curso"];
+  /* Nueva → Aprobada → Programada → En curso → Resuelta. En espera: detenida por algo externo.
+     No procede: cerrada sin trabajo, con su motivo. */
+  var SOL_POR_ASIGNAR = "Aprobada";
+  var SOL_ESPERA = "En espera";
+  var SOL_NO_PROCEDE = "No procede";
+  var ESTADOS_SOL = ["Nueva", SOL_POR_ASIGNAR, "Programada", SOL_ESPERA, "En curso", "Resuelta", SOL_NO_PROCEDE];
+  var SOL_ABIERTAS = ["Nueva", SOL_POR_ASIGNAR, "Programada", SOL_ESPERA, "En curso"];
   var SOL_CLASS = {
     "Nueva": "st-Pendiente",
-    "Aceptada por asignar": "st-PorAsignar",
+    "Aprobada": "st-PorAsignar",
     "Programada": "st-Programado",
+    "En espera": "st-Espera",
     "En curso": "st-EnCurso",
     "Resuelta": "st-Completado",
-    "Rechazada": "neutral"
+    "No procede": "neutral"
   };
+  var MOTIVOS_CIERRE = [
+    { value: "duplicada", label: "Duplicada" },
+    { value: "no_mantenimiento", label: "No es de mantenimiento" },
+    { value: "resuelta_punto", label: "La resolvió el punto" },
+    { value: "otro", label: "Otro motivo" }
+  ];
+  function motivoCierre(v) {
+    for (var i = 0; i < MOTIVOS_CIERRE.length; i++) if (MOTIVOS_CIERRE[i].value === v) return MOTIVOS_CIERRE[i].label;
+    return "";
+  }
+  /* Cómo se lee cada estado cuando se le avisa al punto. */
+  function fraseEstadoSol(e) {
+    return {
+      "Aprobada": "Tu solicitud fue aprobada",
+      "Programada": "Tu solicitud quedó programada",
+      "En espera": "Tu solicitud quedó en espera",
+      "En curso": "Tu solicitud está en curso",
+      "Resuelta": "Tu solicitud quedó resuelta",
+      "No procede": "Tu solicitud no procede"
+    }[e] || "Tu solicitud quedó " + String(e).toLowerCase();
+  }
   var URGENCIAS = [
     { value: "Alta", label: "Alta: hay que atender hoy" },
     { value: "Media", label: "Media: en los próximos días" },
@@ -3339,6 +3370,7 @@ select { pointer-events: none; }
       costo: document.getElementById("pCosto"),
       respuesta: document.getElementById("pRespuesta"),
       respuestaLabel: document.getElementById("pRespuestaLabel"),
+      motivo: document.getElementById("pMotivo"),
       activo: document.getElementById("pActivo")
     },
     tabAct: document.getElementById("tabAct"),
@@ -6673,6 +6705,7 @@ select { pointer-events: none; }
   fillSelect(el.s.urgencia, URGENCIAS);
   fillSelect(el.p.categoria, CATEGORIAS.map(function (c) { return { value: c.id, label: c.corto }; }), "Elige la categoría");
   fillSelect(el.p.prioridad, PRIORIDADES.map(function (t) { return { value: t, label: t }; }));
+  fillSelect(el.p.motivo, MOTIVOS_CIERRE, "Elige el motivo");
 
   function contarNuevas() {
     return state.solicitudes.filter(function (s) { return s.estado === "Nueva"; }).length;
@@ -6746,7 +6779,7 @@ select { pointer-events: none; }
   el.tabAct.addEventListener("click", function () { irASeccion("activos"); });
   el.tabFin.addEventListener("click", function () { irASeccion("finanzas"); });
 
-  /* Las nuevas primero, luego las aceptadas sin asignar; dentro de cada grupo, de la más reciente a la más antigua. */
+  /* Las nuevas primero, luego las aprobadas sin programar; dentro de cada grupo, de la más reciente a la más antigua. */
   function solicitudesVisibles() {
     var lista = state.solicitudes.slice();
     if (state.perfil !== "punto") {
@@ -6995,13 +7028,16 @@ select { pointer-events: none; }
     if (s.prioridad) pareja(dl, "Prioridad", s.prioridad, true);
     card.appendChild(dl);
 
-    if (s.respuesta) {
+    /* Lo que el coordinador le dice al punto: por qué está en espera, por qué no procede, o un mensaje. */
+    var motivo = s.estado === SOL_NO_PROCEDE ? motivoCierre(s.motivo_cierre) : "";
+    if (s.respuesta || motivo) {
       var r = document.createElement("p");
       r.className = "solresp";
       var b = document.createElement("b");
-      b.textContent = "Coordinación: ";
+      b.textContent = s.estado === SOL_ESPERA ? "En espera por: "
+        : (s.estado === SOL_NO_PROCEDE ? "No procede · " + (motivo || "Otro motivo") + (s.respuesta ? ": " : "") : "Coordinación: ");
       r.appendChild(b);
-      r.appendChild(document.createTextNode(s.respuesta));
+      if (s.respuesta) r.appendChild(document.createTextNode(s.respuesta));
       card.appendChild(r);
     }
 
@@ -7025,13 +7061,25 @@ select { pointer-events: none; }
     if (state.perfil === "coordinador") {
       acts.appendChild(botonChico("Editar", "", function () { abrirSolicitud(s); }));
     }
-    if (state.perfil === "coordinador" && (s.estado === "Nueva" || s.estado === SOL_POR_ASIGNAR)) {
+    if (state.perfil === "coordinador") {
+      var abierta = SOL_ABIERTAS.indexOf(s.estado) !== -1;
       if (s.estado === "Nueva") {
-        acts.appendChild(botonChico("Aceptar, por asignar", "", function () { aceptarSolicitud(s); }));
+        acts.appendChild(botonChico("Aprobar", "", function () { aceptarSolicitud(s); }));
       }
-      acts.appendChild(botonChico("Programar", "primary", function () { abrirProgramar(s, "programar"); }));
-      acts.appendChild(botonChico("Rechazar", "danger", function () { abrirProgramar(s, "rechazar"); }));
-    } else if (state.perfil !== "punto" && s.mantenimiento_id) {
+      if (s.estado === SOL_ESPERA) {
+        acts.appendChild(botonChico("Reanudar", "primary", function () { reanudarSolicitud(s); }));
+      }
+      if (abierta && !s.mantenimiento_id) {
+        acts.appendChild(botonChico("Programar", s.estado === SOL_ESPERA ? "" : "primary", function () { abrirProgramar(s, "programar"); }));
+      }
+      if (abierta && s.estado !== "Nueva" && s.estado !== SOL_ESPERA) {
+        acts.appendChild(botonChico("En espera", "", function () { abrirProgramar(s, "espera"); }));
+      }
+      if (abierta && !s.mantenimiento_id) {
+        acts.appendChild(botonChico("No procede", "danger", function () { abrirProgramar(s, "noprocede"); }));
+      }
+    }
+    if (state.perfil !== "punto" && s.mantenimiento_id) {
       acts.appendChild(botonChico("Ver mantenimiento", "", function () { verMantenimiento(s.mantenimiento_id); }));
     }
     if (state.perfil === "coordinador") {
@@ -7062,14 +7110,35 @@ select { pointer-events: none; }
     }).catch(fallo);
   }
 
-  /* Aceptada, pero todavía sin contratista ni fecha. Se comprueba la fila: sin permiso no hay error. */
+  /* Aprobada: se hará, pero todavía sin contratista ni fecha. Se comprueba la fila: sin permiso no hay error. */
   function aceptarSolicitud(s) {
     if (!sb) return sinBase();
     sb.from("solicitudes").update({ estado: SOL_POR_ASIGNAR }).eq("id", s.id).select("id").then(function (res) {
       if (res.error) throw res.error;
       toast(res.data && res.data.length
-        ? "Solicitud aceptada, por asignar. El punto ya lo puede ver."
-        : "No se pudo aceptar la solicitud. Recarga la app e intenta de nuevo.");
+        ? "Solicitud aprobada. El punto ya lo puede ver."
+        : "No se pudo aprobar la solicitud. Recarga la app e intenta de nuevo.");
+      return cargarSolicitudes();
+    }).catch(fallo);
+  }
+
+  /* Sale de la espera: vuelve a donde va su trabajo, o a Aprobada si aún no tiene trabajo. */
+  function reanudarSolicitud(s) {
+    if (!sb) return sinBase();
+    var estado = SOL_POR_ASIGNAR;
+    if (s.mantenimiento_id) {
+      estado = "Programada";
+      state.registros.forEach(function (r) {
+        if (r.id !== s.mantenimiento_id) return;
+        if (r.estado === "En curso") estado = "En curso";
+        else if (r.estado === "Completado") estado = "Resuelta";
+      });
+    }
+    sb.from("solicitudes").update({ estado: estado, respuesta: "" }).eq("id", s.id).select("id").then(function (res) {
+      if (res.error) throw res.error;
+      toast(res.data && res.data.length
+        ? "Solicitud reanudada: quedó " + estado.toLowerCase() + "."
+        : "No se pudo reanudar la solicitud. Recarga la app e intenta de nuevo.");
       return cargarSolicitudes();
     }).catch(fallo);
   }
@@ -7218,10 +7287,10 @@ select { pointer-events: none; }
       var antes = null;
       state.solicitudes.forEach(function (s) { if (s.id === nueva.id) antes = s; });
       if (antes && antes.estado !== nueva.estado) {
-        var msg = "Tu solicitud quedó " + String(nueva.estado).toLowerCase() +
+        var msg = fraseEstadoSol(nueva.estado) +
           (nueva.fecha_programada && nueva.estado === "Programada" ? " para el " + fecha(nueva.fecha_programada) : "") + ".";
         toast(msg);
-        avisarSistema("Solicitud " + String(nueva.estado).toLowerCase(),
+        avisarSistema(fraseEstadoSol(nueva.estado),
           String(nueva.descripcion || "").slice(0, 100), "sol-" + nueva.id);
       }
     }
@@ -7482,32 +7551,44 @@ select { pointer-events: none; }
     });
   });
 
-  /* ---------- programar o rechazar ---------- */
+  /* ---------- programar, poner en espera o cerrar como "No procede" ---------- */
 
   var solEnCurso = null;
   var progModo = "programar";
+  var PROG_MODOS = {
+    programar: { titulo: "Programar solicitud", boton: "Programar", clase: "primary", etiqueta: "Mensaje para el punto (opcional)" },
+    espera: { titulo: "Poner en espera", boton: "Poner en espera", clase: "primary", etiqueta: "¿Qué se está esperando? El punto lo verá" },
+    noprocede: { titulo: "La solicitud no procede", boton: "No procede", clase: "danger", etiqueta: "Explicación para el punto (opcional)" }
+  };
 
   function abrirProgramar(s, modo) {
     var p = el.p;
+    var m = PROG_MODOS[modo] || PROG_MODOS.programar;
     var programar = modo === "programar";
     solEnCurso = s;
     progModo = modo;
-    el.progTitulo.textContent = programar ? "Programar solicitud" : "Rechazar solicitud";
+    el.progTitulo.textContent = m.titulo;
     el.progResumen.textContent = nombrePunto(s.punto) + " · " + (s.descripcion || "");
     Array.prototype.forEach.call(el.progForm.querySelectorAll(".soloprog"), function (n) { n.hidden = !programar; });
+    Array.prototype.forEach.call(el.progForm.querySelectorAll(".solocierre"), function (n) { n.hidden = modo !== "noprocede"; });
     p.categoria.value = s.categoria || "";
     p.prioridad.value = s.urgencia || "Media";
     llenarActivos(p.activo, s.punto, "");
     p.fecha.value = "";
     p.responsable.value = "";
     p.costo.value = "";
+    p.motivo.value = "";
     p.respuesta.value = "";
-    p.respuestaLabel.textContent = programar ? "Mensaje para el punto (opcional)" : "Motivo, para que el punto lo sepa";
-    el.progGuardar.textContent = programar ? "Programar" : "Rechazar";
-    el.progGuardar.className = programar ? "primary" : "danger";
+    p.respuesta.placeholder = modo === "espera" ? "Ej.: Permiso del centro comercial para trabajar de noche."
+      : (modo === "noprocede" ? "Ej.: Ya existe la solicitud del 3 de noviembre por lo mismo." : "Ej.: El técnico pasa el jueves en la mañana.");
+    p.respuestaLabel.textContent = m.etiqueta;
+    el.progGuardar.textContent = m.boton;
+    el.progGuardar.className = m.clase;
     el.progError.hidden = true;
     el.progOverlay.hidden = false;
-    setTimeout(function () { (programar ? (p.categoria.value ? p.fecha : p.categoria) : p.respuesta).focus(); }, 30);
+    setTimeout(function () {
+      (programar ? (p.categoria.value ? p.fecha : p.categoria) : (modo === "noprocede" ? p.motivo : p.respuesta)).focus();
+    }, 30);
   }
 
   function cerrarProgramar() {
@@ -7527,7 +7608,7 @@ select { pointer-events: none; }
 
   function restaurarProgramar() {
     el.progGuardar.disabled = false;
-    el.progGuardar.textContent = progModo === "programar" ? "Programar" : "Rechazar";
+    el.progGuardar.textContent = (PROG_MODOS[progModo] || PROG_MODOS.programar).boton;
   }
 
   el.progForm.addEventListener("submit", function (ev) {
@@ -7537,16 +7618,32 @@ select { pointer-events: none; }
     if (!s) return;
     if (!sb) return sinBase();
 
-    if (progModo === "rechazar") {
-      if (!p.respuesta.value.trim()) return errorProgramar("Escribe el motivo para que el punto lo sepa.");
+    if (progModo === "noprocede" || progModo === "espera") {
+      var cambios;
+      var listo;
+      if (progModo === "noprocede") {
+        if (!p.motivo.value) return errorProgramar("Elige el motivo.");
+        if (p.motivo.value === "otro" && !p.respuesta.value.trim()) {
+          return errorProgramar("Con “Otro motivo”, escribe una explicación para que el punto la entienda.");
+        }
+        cambios = { estado: SOL_NO_PROCEDE, motivo_cierre: p.motivo.value, respuesta: p.respuesta.value.trim() };
+        listo = "Solicitud cerrada: no procede. El punto verá el motivo.";
+      } else {
+        if (!p.respuesta.value.trim()) return errorProgramar("Escribe qué se está esperando, para que el punto lo sepa.");
+        cambios = { estado: SOL_ESPERA, respuesta: p.respuesta.value.trim() };
+        listo = "Solicitud en espera. El punto verá el motivo.";
+      }
       el.progGuardar.disabled = true;
       el.progGuardar.textContent = "Guardando…";
-      sb.from("solicitudes").update({ estado: "Rechazada", respuesta: p.respuesta.value.trim() }).eq("id", s.id)
+      sb.from("solicitudes").update(cambios).eq("id", s.id).select("id")
         .then(function (res) {
           if (res && res.error) throw res.error;
           restaurarProgramar();
+          if (!res.data || !res.data.length) {
+            return errorProgramar("No se guardó el cambio: revisa que hayas entrado como coordinador y recarga la app.");
+          }
           cerrarProgramar();
-          toast("Solicitud rechazada. El punto verá el motivo.");
+          toast(listo);
           return cargarSolicitudes();
         }).catch(function (e) {
           restaurarProgramar();
@@ -9240,9 +9337,9 @@ select { pointer-events: none; }
     var totalPagar = porPagar.reduce(function (t, r) { return t + Number(r.costoReal); }, 0);
 
     /* Tarjeta de planes: cuántos planes activos tienen su trabajo al día.
-       Debajo, en otro color, cómo van las solicitudes (las rechazadas no cuentan). */
+       Debajo, en otro color, cómo van las solicitudes (las que no proceden no cuentan). */
     var planesPunto = state.planes.filter(function (p) { return p.vigente && enPuntoElegido(p); });
-    var solsPunto = state.solicitudes.filter(function (s) { return s.estado !== "Rechazada" && enPuntoElegido(s); });
+    var solsPunto = state.solicitudes.filter(function (s) { return s.estado !== SOL_NO_PROCEDE && enPuntoElegido(s); });
     var hero = null;
     if (planesPunto.length || solsPunto.length) {
       hero = document.createElement("div");
@@ -9367,10 +9464,10 @@ select { pointer-events: none; }
           "Recibida " + fechaHora(s.creado), "sol", function () { irASeccion("solicitudes"); });
       }), "No hay solicitudes nuevas de los puntos."));
 
-    /* Solo aparece si hay alguna: son las que quedaron aceptadas y falta asignarles contratista y fecha. */
+    /* Solo aparece si hay alguna: son las aprobadas a las que falta asignarles contratista y fecha. */
     var porAsignar = state.solicitudes.filter(function (s) { return s.estado === SOL_POR_ASIGNAR && enPuntoElegido(s); });
     if (porAsignar.length) {
-      wrap.appendChild(bloqueHoy("hoyPorAsignar", "Aceptadas por asignar",
+      wrap.appendChild(bloqueHoy("hoyPorAsignar", "Aprobadas, por programar",
         porAsignar.map(function (s) {
           return filaHoy(s.descripcion, nombrePunto(s.punto) + " · urgencia " + String(s.urgencia || "Media").toLowerCase(),
             "Recibida " + fechaHora(s.creado), "sol", function () { irASeccion("solicitudes"); });
