@@ -2749,10 +2749,10 @@ select { pointer-events: none; }
     <h2>Eliminar pago pendiente</h2>
     <p class="pendaviso" id="pendTrabajo"></p>
     <p class="finnota">
-      <b>Borrar solo el pendiente:</b> el trabajo se conserva con su costo e historial; solo deja de aparecer aquí.
+      <b>Borrar solo el pendiente:</b> <span id="pendNotaPend">el trabajo se conserva con su costo e historial; solo deja de aparecer aquí.</span>
     </p>
     <p class="finnota">
-      <b>Borrar el trabajo:</b> se elimina el trabajo con sus notas de seguimiento. No se puede deshacer.
+      <b id="pendTituloBorrar">Borrar el trabajo:</b> <span id="pendNotaBorrar">se elimina el trabajo con sus notas de seguimiento. No se puede deshacer.</span>
     </p>
     <div class="sheet-actions">
       <button type="button" id="pendCancelar">Cancelar</button>
@@ -8701,13 +8701,40 @@ select { pointer-events: none; }
     return wrap;
   }
 
-  /* Mantenimientos marcados como pagados que todavía no tienen su egreso aquí. */
+  /* Todo trabajo completado y toda solicitud resuelta por su cuenta debe tener su pago (egreso)
+     registrado aquí. Los que no lo tienen quedan pendientes, sin importar cómo esté marcado el pago. */
+  function pagosPendientes() {
+    var pagT = {};
+    var pagS = {};
+    state.movimientos.forEach(function (m) {
+      if (m.mantenimiento_id) pagT[m.mantenimiento_id] = true;
+      if (m.solicitud_id) pagS[m.solicitud_id] = true;
+    });
+    var trabajos = state.registros.filter(function (r) {
+      return r.estado === "Completado" && !pagT[r.id] && !r.pagoDescartado && enPunto(r);
+    }).map(function (r) {
+      return { tipo: "trabajo", obj: r, id: r.id, fecha: fechaInterv(r), punto: r.punto, desc: r.descripcion,
+        quien: r.responsable, monto: numero(r.costoReal), est: numero(r.costoEstimado) };
+    });
+    var sols = state.solicitudes.filter(function (s) {
+      var det = state.solDetalle[s.id];
+      return s.estado === "Resuelta" && !s.mantenimiento_id && !pagS[s.id] && !(det && det.pago_descartado) && enPunto(s);
+    }).map(function (s) {
+      var det = state.solDetalle[s.id] || {};
+      return { tipo: "solicitud", obj: s, id: s.id, fecha: s.fecha_programada || String(s.actualizado || s.creado || "").slice(0, 10),
+        punto: s.punto, desc: s.descripcion, quien: det.responsable, monto: null, est: numero(det.costo_estimado) };
+    });
+    return trabajos.concat(sols).sort(function (a, b) { return String(b.fecha).localeCompare(String(a.fecha)); });
+  }
+
+  function montoPendiente(p) {
+    if (p.monto !== null) return cop(p.monto);
+    if (p.est !== null) return cop(p.est) + " (estimado)";
+    return "Sin costo";
+  }
+
   function bloquePendientes() {
-    var pagados = {};
-    state.movimientos.forEach(function (m) { if (m.mantenimiento_id) pagados[m.mantenimiento_id] = true; });
-    var lista = state.registros.filter(function (r) {
-      return r.estadoPago === "Pagado" && numero(r.costoReal) !== null && !pagados[r.id] && !r.pagoDescartado && enPunto(r);
-    }).sort(function (a, b) { return String(fechaInterv(b)).localeCompare(String(fechaInterv(a))); });
+    var lista = pagosPendientes();
     if (!lista.length) return null;
 
     var caja = document.createElement("div");
@@ -8718,41 +8745,47 @@ select { pointer-events: none; }
     var p = document.createElement("p");
     p.className = "finnota";
     p.style.margin = "0 0 6px";
-    p.textContent = "Mantenimientos marcados como pagados que aún no tienen su egreso registrado en finanzas.";
+    p.textContent = "Trabajos completados y solicitudes resueltas que aún no tienen su pago registrado en finanzas.";
     caja.appendChild(p);
-    lista.slice(0, 5).forEach(function (r) {
+    lista.forEach(function (x) {
       var fila = document.createElement("div");
       fila.className = "pendrow";
       var t = document.createElement("span");
-      t.textContent = fecha(fechaInterv(r)) + " · " + nombrePunto(r.punto) + " · " +
-        (r.responsable || "Sin contratista") + " · " + cop(r.costoReal);
+      t.textContent = (x.tipo === "solicitud" ? "Solicitud · " : "") + fecha(x.fecha) + " · " + nombrePunto(x.punto) + " · " +
+        String(x.desc || "Sin descripción").slice(0, 60) + " · " + (x.quien || "Sin contratista") + " · " + montoPendiente(x);
       fila.appendChild(t);
       var accs = document.createElement("div");
       accs.className = "pendacc";
-      accs.appendChild(botonChico("Registrar pago", "primary", function () { abrirMovimiento(null, "Egreso", r.id); }));
-      if (!soloLectura()) accs.appendChild(botonChico("Eliminar", "danger", function () { abrirEliminarPendiente(r); }));
+      if (!soloLectura()) {
+        accs.appendChild(botonChico("Registrar pago", "primary", function () {
+          abrirMovimiento(null, "Egreso", x.tipo === "solicitud" ? "sol:" + x.id : x.id);
+        }));
+        accs.appendChild(botonChico("Eliminar", "danger", function () { abrirEliminarPendiente(x); }));
+      }
       fila.appendChild(accs);
       caja.appendChild(fila);
     });
-    if (lista.length > 5) {
-      var mas = document.createElement("p");
-      mas.className = "finnota";
-      mas.style.margin = "8px 0 0";
-      mas.textContent = "Y " + (lista.length - 5) + " más.";
-      caja.appendChild(mas);
-    }
     return caja;
   }
 
-  /* Un pendiente siempre viene de un trabajo: antes de borrar se avisa cuál y se deja elegir. */
+  /* Un pendiente viene de un trabajo o de una solicitud: antes de borrar se avisa cuál y se deja elegir. */
   var pendActual = null;
   var pendOverlay = document.getElementById("pendOverlay");
 
-  function abrirEliminarPendiente(r) {
-    pendActual = r;
-    document.getElementById("pendTrabajo").textContent = "Este pago está enlazado al trabajo \"" +
-      (r.descripcion || "Sin descripción") + "\" (" + nombrePunto(r.punto) + " · " +
-      (r.responsable || "Sin contratista") + " · " + cop(r.costoReal) + ").";
+  function abrirEliminarPendiente(x) {
+    pendActual = x;
+    var nombre = x.tipo === "solicitud" ? "la solicitud" : "el trabajo";
+    document.getElementById("pendTrabajo").textContent = "Este pago está enlazado a " + nombre + " \"" +
+      (x.desc || "Sin descripción") + "\" (" + nombrePunto(x.punto) + " · " +
+      (x.quien || "Sin contratista") + " · " + montoPendiente(x) + ").";
+    document.getElementById("pendNotaPend").textContent = x.tipo === "solicitud"
+      ? "la solicitud se conserva; solo deja de aparecer aquí."
+      : "el trabajo se conserva con su costo e historial; solo deja de aparecer aquí.";
+    document.getElementById("pendNotaBorrar").textContent = x.tipo === "solicitud"
+      ? "se elimina la solicitud con sus fotos. No se puede deshacer."
+      : "se elimina el trabajo con sus notas de seguimiento. No se puede deshacer.";
+    document.getElementById("pendTituloBorrar").textContent = x.tipo === "solicitud" ? "Borrar la solicitud:" : "Borrar el trabajo:";
+    document.getElementById("pendBorrarTrabajo").textContent = x.tipo === "solicitud" ? "Borrar la solicitud" : "Borrar el trabajo";
     pendOverlay.hidden = false;
   }
 
@@ -8766,21 +8799,26 @@ select { pointer-events: none; }
     if (ev.target === pendOverlay) cerrarEliminarPendiente();
   });
   document.getElementById("pendBorrarTrabajo").addEventListener("click", function () {
-    var r = pendActual;
+    var x = pendActual;
     cerrarEliminarPendiente();
-    if (r) eliminar(r);
+    if (!x) return;
+    if (x.tipo === "solicitud") eliminarSolicitud(x.obj);
+    else eliminar(x.obj);
   });
   document.getElementById("pendBorrarPendiente").addEventListener("click", function () {
-    var r = pendActual;
+    var x = pendActual;
     cerrarEliminarPendiente();
-    if (!r) return;
+    if (!x) return;
     if (!sb) return sinBase();
-    sb.from("mantenimientos").update({ pago_descartado: true }).eq("id", r.id).select("id").then(function (res) {
+    var peticion = x.tipo === "solicitud"
+      ? sb.from("solicitudes_detalle").upsert({ solicitud_id: x.id, pago_descartado: true }).select("solicitud_id")
+      : sb.from("mantenimientos").update({ pago_descartado: true }).eq("id", x.id).select("id");
+    peticion.then(function (res) {
       if (res.error) throw res.error;
       toast(res.data && res.data.length
-        ? "Pendiente borrado. El trabajo sigue guardado."
+        ? "Pendiente borrado. " + (x.tipo === "solicitud" ? "La solicitud" : "El trabajo") + " sigue guardado" + (x.tipo === "solicitud" ? "a." : ".")
         : "No se pudo borrar el pendiente. Recarga la app e intenta de nuevo.");
-      return cargarDatos();
+      return x.tipo === "solicitud" ? cargarSolicitudes() : cargarDatos();
     }).catch(fallo);
   });
 
@@ -9053,6 +9091,9 @@ select { pointer-events: none; }
       if (m.mantenimiento_id) {
         acc.appendChild(botonChico("Ver mantenimiento", "", function () { verMantenimiento(m.mantenimiento_id); }));
       }
+      if (m.solicitud_id) {
+        acc.appendChild(botonChico("Ver solicitud", "", function () { irASeccion("solicitudes"); }));
+      }
       if (state.perfil === "coordinador") acc.appendChild(botonChico("Editar", "", function () { abrirMovimiento(m); }));
       if (acc.children.length) fila.appendChild(acc);
       movs.appendChild(fila);
@@ -9108,26 +9149,57 @@ select { pointer-events: none; }
     });
   }
 
+  /* Un egreso se enlaza a un trabajo (su id) o a una solicitud resuelta por su cuenta ("sol:" + id). */
   function llenarMantPago(valor) {
     var pagados = {};
-    state.movimientos.forEach(function (m) { if (m.mantenimiento_id) pagados[m.mantenimiento_id] = true; });
+    state.movimientos.forEach(function (m) {
+      if (m.mantenimiento_id) pagados[m.mantenimiento_id] = true;
+      if (m.solicitud_id) pagados["sol:" + m.solicitud_id] = true;
+    });
     var lista = state.registros.filter(function (r) {
-      return r.id === valor || numero(r.costoReal) !== null || numero(r.costoEstimado) !== null;
+      return r.id === valor || r.estado === "Completado" || numero(r.costoReal) !== null || numero(r.costoEstimado) !== null;
     }).sort(function (a, b) { return String(fechaInterv(b)).localeCompare(String(fechaInterv(a))); });
-    fillSelect(el.m.mant, lista.map(function (r) {
+    var opciones = lista.map(function (r) {
       var monto = numero(r.costoReal) !== null ? r.costoReal : r.costoEstimado;
       return {
         value: r.id,
         label: fecha(fechaInterv(r)) + " · " + nombrePunto(r.punto) + " · " +
-          String(r.descripcion || "").slice(0, 50) + " · " + cop(monto) + (pagados[r.id] && r.id !== valor ? " (ya tiene pago)" : "")
+          String(r.descripcion || "").slice(0, 50) + " · " + (monto !== null ? cop(monto) : "sin costo") +
+          (pagados[r.id] && r.id !== valor ? " (ya tiene pago)" : "")
       };
-    }), "Ninguno");
+    });
+    state.solicitudes.filter(function (s) {
+      return !s.mantenimiento_id && ("sol:" + s.id === valor || s.estado === "Resuelta" || s.estado === "Programada" || s.estado === "En curso");
+    }).forEach(function (s) {
+      var det = state.solDetalle[s.id] || {};
+      var est = numero(det.costo_estimado);
+      opciones.push({
+        value: "sol:" + s.id,
+        label: "Solicitud · " + fecha(s.fecha_programada || String(s.creado || "").slice(0, 10)) + " · " + nombrePunto(s.punto) + " · " +
+          String(s.descripcion || "").slice(0, 50) + " · " + (est !== null ? cop(est) : "sin costo") +
+          (pagados["sol:" + s.id] && "sol:" + s.id !== valor ? " (ya tiene pago)" : "")
+      });
+    });
+    fillSelect(el.m.mant, opciones, "Ninguno");
     el.m.mant.value = valor || "";
   }
 
   el.m.mant.addEventListener("change", function () {
+    var v = el.m.mant.value;
+    if (v.indexOf("sol:") === 0) {
+      var s = null;
+      state.solicitudes.forEach(function (x) { if ("sol:" + x.id === v) s = x; });
+      if (!s) return;
+      var det = state.solDetalle[s.id] || {};
+      if (det.responsable) el.m.tercero.value = det.responsable;
+      if (numero(det.costo_estimado) !== null) el.m.valor.value = numero(det.costo_estimado);
+      el.m.concepto.value = ("Pago: " + (s.descripcion || "")).slice(0, 500);
+      el.m.punto.value = s.punto || "";
+      el.m.categoria.value = s.categoria || "";
+      return;
+    }
     var r = null;
-    for (var i = 0; i < state.registros.length; i++) if (state.registros[i].id === el.m.mant.value) r = state.registros[i];
+    for (var i = 0; i < state.registros.length; i++) if (state.registros[i].id === v) r = state.registros[i];
     if (!r) return;
     var monto = numero(r.costoReal) !== null ? numero(r.costoReal) : numero(r.costoEstimado);
     if (r.responsable) el.m.tercero.value = r.responsable;
@@ -9155,7 +9227,7 @@ select { pointer-events: none; }
       ? "Ya tiene soporte: si eliges otro, lo reemplaza."
       : "Opcional. PDF, JPG, PNG o WebP, hasta 20 MB.";
     llenarTerceros();
-    llenarMantPago(m ? m.mantenimiento_id : "");
+    llenarMantPago(m ? (m.solicitud_id ? "sol:" + m.solicitud_id : m.mantenimiento_id) : "");
     ponerTipo(m ? m.tipo : (tipo || "Egreso"));
     if (mantId) {
       x.mant.value = mantId;
@@ -9229,7 +9301,8 @@ select { pointer-events: none; }
       categoria: x.categoria.value || null,
       medio: x.medio.value,
       referencia: x.ref.value.trim(),
-      mantenimiento_id: finTipoForm === "Egreso" ? (x.mant.value || null) : null,
+      mantenimiento_id: finTipoForm === "Egreso" && x.mant.value && x.mant.value.indexOf("sol:") !== 0 ? x.mant.value : null,
+      solicitud_id: finTipoForm === "Egreso" && x.mant.value.indexOf("sol:") === 0 ? x.mant.value.slice(4) : null,
       notas: x.notas.value.trim()
     };
 
