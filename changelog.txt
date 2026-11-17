@@ -13,6 +13,9 @@ La más reciente va primero. Fechas en hora de Colombia.
 VERSIÓN 2.5 · CAMBIOS DESDE LA REVISIÓN DE LA APP
 -------------------------------------------------
 
+2.5.5 · 2026-11-17 · Título también al editar
+  - El coordinador ve el campo Título también en "Editar" (menú "⋯" de la tarjeta) y en "Registrar solicitud", no solo al programar o reprogramar.
+
 2.5.4 · 2026-11-17 · Título de las solicitudes
   - Al programar o reprogramar una solicitud se le puede poner un título corto. Si se deja vacío, se sigue usando la descripción.
   - El título se ve en la tarjeta (con la descripción del punto debajo), en Hoy, en los pagos pendientes de Finanzas y en el concepto del pago.
