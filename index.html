@@ -2451,6 +2451,27 @@ select { pointer-events: none; }
 .desplegable li[aria-selected="true"] { color: var(--accent); font-weight: 600; background: var(--accent-soft); }
 .desplegable li[aria-selected="true"]::after { content: "✓"; margin-left: auto; padding-left: 8px; }
 .desplegable li[aria-disabled="true"] { color: var(--fg-muted); opacity: .55; cursor: default; background: none; }
+.desplegable li.peligro { color: var(--s-pend-fg); }
+.desplegable li.peligro:hover, .desplegable li.peligro:focus-visible { background: var(--s-pend-bg); }
+
+/* Botón "⋯" de acciones de una tarjeta: va al final de la fila. */
+.tiny.masacc { margin-left: auto; min-width: 40px; padding-inline: 10px; font-size: 1.05rem; line-height: 1; letter-spacing: .05em; }
+
+/* Estado del coordinador dentro del menú de perfil. */
+body.estado-en-menu .estadobar { display: none; }
+.menuestado { padding: 4px 11px 10px; margin-bottom: 4px; border-bottom: 1px solid var(--line); }
+.menuestado .estadoblk { display: flex; flex-direction: column; align-items: stretch; gap: 10px; }
+.menuestado .estadogrupo { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
+.menuestado .estadogrupo .estadosel { flex: 1 1 100%; width: 100%; }
+.menuestado .estadotime { margin-left: 0; font-size: .74rem; color: var(--fg-muted); }
+.avatarbtn { position: relative; }
+.avatarestado { position: absolute; right: -1px; bottom: -1px; width: 13px; height: 13px; box-shadow: 0 0 0 2px var(--ink, #0F1430); }
+
+/* En el teléfono el punto usa solo el botón flotante, y la lista deja espacio para que no tape la última tarjeta. */
+@media (max-width: 640px) {
+  body.modo-punto .solhead .primary { display: none; }
+  body.modo-punto main { padding-bottom: 84px; }
+}
 
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; animation: none !important; }
@@ -2489,6 +2510,7 @@ select { pointer-events: none; }
       </button>
       <div class="menupanel" id="menuPanel" hidden role="menu">
         <p class="menurol" id="menuRol"></p>
+        <div class="menuestado" id="menuEstado" hidden></div>
         <button type="button" class="destacado" id="btnNuevo" role="menuitem">Registrar mantenimiento</button>
         <button type="button" id="btnPlanes" role="menuitem">Planes preventivos</button>
         <button type="button" id="btnPlantilla" role="menuitem">Cargar plantilla preventiva</button>
@@ -2591,7 +2613,7 @@ select { pointer-events: none; }
     <p class="credito">Diseñado por: Daniel Morales V</p>
     <!-- Versión: el primer número sube con un cambio grande, el segundo con una función nueva
          y el tercero con un arreglo o ajuste. Se actualiza en cada publicación. -->
-    <p class="version">Versión 2.5.0</p>
+    <p class="version">Versión 2.6.0</p>
   </div>
 </footer>
 
@@ -3675,7 +3697,7 @@ select { pointer-events: none; }
   });
   el.menuPanel.addEventListener("click", function (ev) {
     /* El selector de tema no cierra el menú: suele probarse una y otra opción. */
-    if (ev.target.closest && ev.target.closest(".menutema")) return;
+    if (ev.target.closest && ev.target.closest(".menutema, .menuestado")) return;
     abrirMenu(false);
   });
   document.addEventListener("click", function (ev) {
@@ -6375,6 +6397,21 @@ select { pointer-events: none; }
     }
     el.btnMenu.textContent = "";
     el.btnMenu.appendChild(globoPerfil(k).firstChild);
+    pintarPuntoEstado();
+  }
+
+  /* Un punto de color sobre el botón de perfil del coordinador recuerda su estado actual. */
+  function pintarPuntoEstado() {
+    var viejo = el.btnMenu.querySelector(".avatarestado");
+    if (viejo) viejo.remove();
+    if (state.perfil !== "coordinador" || soloLectura()) return;
+    var e = state.estadoCoord || {};
+    var tono = tonoEstado(e.estado);
+    var dot = document.createElement("span");
+    dot.className = "edot avatarestado" + (tono ? " t-" + tono : "");
+    dot.setAttribute("aria-hidden", "true");
+    el.btnMenu.appendChild(dot);
+    el.btnMenu.setAttribute("aria-label", "Opciones · Estado: " + (tono ? e.estado : "sin definir"));
   }
 
   function marcarRol() {
@@ -6491,12 +6528,23 @@ select { pointer-events: none; }
     return box;
   }
 
+  /* El coordinador cambia su estado desde el menú de perfil: así no ocupa espacio arriba de cada sección.
+     Los demás perfiles lo siguen viendo arriba, solo para consulta. */
   function renderEstadoCoord() {
+    var editable = state.perfil === "coordinador" && !soloLectura();
+    document.body.classList.toggle("estado-en-menu", editable);
     var inner = document.getElementById("estadoBarInner");
     if (inner) {
       inner.textContent = "";
-      inner.appendChild(bloqueEstado(state.perfil === "coordinador" && !soloLectura()));
+      if (!editable) inner.appendChild(bloqueEstado(false));
     }
+    var menu = document.getElementById("menuEstado");
+    if (menu) {
+      menu.textContent = "";
+      menu.hidden = !editable;
+      if (editable) menu.appendChild(bloqueEstado(true));
+    }
+    pintarPuntoEstado();
     var g = document.getElementById("gateEstado");
     if (g) {
       g.textContent = "";
@@ -7329,39 +7377,75 @@ select { pointer-events: none; }
       card.appendChild(fb);
     }
 
+    /* A la vista solo el paso siguiente; lo demás va en el menú "⋯" para que la lista no se alargue. */
     var acts = document.createElement("div");
     acts.className = "card-actions";
-    if (state.perfil === "coordinador") {
-      acts.appendChild(botonChico("Editar", "", function () { abrirSolicitud(s); }));
-    }
+    var menu = [];
     if (state.perfil === "coordinador") {
       var abierta = SOL_ABIERTAS.indexOf(s.estado) !== -1;
+      var yaProg = s.estado === "Programada" || s.estado === "En curso";
+      var programar = function () { abrirProgramar(s, "programar"); };
       if (s.estado === "Nueva") {
         acts.appendChild(botonChico("Aprobar", "", function () { aceptarSolicitud(s); }));
       }
       if (s.estado === SOL_ESPERA) {
         acts.appendChild(botonChico("Reanudar", "primary", function () { reanudarSolicitud(s); }));
-      }
-      if (abierta && !s.mantenimiento_id) {
-        var yaProg = s.estado === "Programada" || s.estado === "En curso";
-        acts.appendChild(botonChico(yaProg ? "Reprogramar" : "Programar", s.estado === SOL_ESPERA || yaProg ? "" : "primary",
-          function () { abrirProgramar(s, "programar"); }));
+        if (!s.mantenimiento_id) menu.push({ texto: "Programar", fn: programar });
+      } else if (abierta && !s.mantenimiento_id) {
+        acts.appendChild(botonChico(yaProg ? "Reprogramar" : "Programar", yaProg ? "" : "primary", programar));
       }
       if (abierta && s.estado !== "Nueva" && s.estado !== SOL_ESPERA) {
-        acts.appendChild(botonChico("En espera", "", function () { abrirProgramar(s, "espera"); }));
+        menu.push({ texto: "Poner en espera", fn: function () { abrirProgramar(s, "espera"); } });
       }
       if (abierta && !s.mantenimiento_id) {
-        acts.appendChild(botonChico("No procede", "danger", function () { abrirProgramar(s, "noprocede"); }));
+        menu.push({ texto: "No procede", peligro: true, fn: function () { abrirProgramar(s, "noprocede"); } });
       }
+      menu.push({ texto: "Editar", fn: function () { abrirSolicitud(s); } });
+      menu.push({ texto: "Eliminar", peligro: true, fn: function () { eliminarSolicitud(s); } });
     }
     if (state.perfil !== "punto" && s.mantenimiento_id) {
       acts.appendChild(botonChico("Ver mantenimiento", "", function () { verMantenimiento(s.mantenimiento_id); }));
     }
-    if (state.perfil === "coordinador") {
-      acts.appendChild(botonChico("Eliminar", "danger", function () { eliminarSolicitud(s); }));
-    }
+    if (menu.length) acts.appendChild(botonAcciones(menu, "Más acciones de la solicitud"));
     if (acts.children.length) card.appendChild(acts);
     return card;
+  }
+
+  /* Botón "⋯" que abre una lista de acciones con el mismo desplegable de la app.
+     Por dentro es un select sin opción marcada: al elegir una, se ejecuta su acción. */
+  function botonAcciones(items, etiqueta) {
+    var sel = document.createElement("select");
+    sel.setAttribute("aria-label", etiqueta);
+    var vacia = document.createElement("option");
+    vacia.hidden = true;
+    sel.appendChild(vacia);
+    items.forEach(function (it, i) {
+      var op = document.createElement("option");
+      op.value = String(i);
+      op.textContent = it.texto;
+      sel.appendChild(op);
+    });
+    sel.addEventListener("change", function () {
+      var it = items[Number(sel.value)];
+      sel.selectedIndex = 0;
+      if (it) it.fn();
+    });
+    var b = botonChico("⋯", "masacc", function () {
+      /* El toque que cerró la lista no debe volver a abrirla. */
+      if (desp.ultimo && desp.ultimo.sel === sel && Date.now() - desp.ultimo.hora < 350) return;
+      abrirDesplegable(sel, b);
+      if (!desp.lista) return;
+      desp.lista.setAttribute("role", "menu");
+      Array.prototype.forEach.call(desp.lista.children, function (li) {
+        li.setAttribute("role", "menuitem");
+        li.removeAttribute("aria-selected");
+        if (items[Number(li.dataset.i) - 1] && items[Number(li.dataset.i) - 1].peligro) li.classList.add("peligro");
+      });
+    });
+    b.setAttribute("aria-label", etiqueta);
+    b.setAttribute("aria-haspopup", "menu");
+    b.title = etiqueta;
+    return b;
   }
 
   /* Borra la solicitud y sus fotos. El trabajo creado desde ella, si lo hay, se conserva.
