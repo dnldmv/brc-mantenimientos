@@ -1422,6 +1422,7 @@ button.lineatitulo[aria-expanded="true"]::after { transform: rotate(90deg); }
 .solavisos-bloq details { width: 100%; }
 .solavisos-bloq summary { cursor: pointer; font-weight: 500; color: var(--fg); }
 .solavisos-bloq p { margin: 6px 0 0; }
+.soldesc { margin: -4px 0 0; font-size: .84rem; color: var(--fg-muted); overflow-wrap: break-word; white-space: pre-line; }
 .solresp { font-size: .85rem; margin: 0; padding: 8px 10px; background: var(--surface-2); border-radius: var(--radius); overflow-wrap: break-word; }
 .progresumen { font-size: .86rem; color: var(--fg-muted); margin: -4px 0 12px; overflow-wrap: break-word; }
 .f label.checkline { display: flex; align-items: center; gap: 8px; font-size: .9rem; text-transform: none; letter-spacing: 0; color: var(--fg); font-weight: 500; }
@@ -2619,7 +2620,7 @@ body.estado-en-menu .estadobar { display: none; }
     <p class="credito">Desarrollado por: Daniel Morales V</p>
     <!-- Versión: el primer número sube con un cambio grande, el segundo con una función nueva
          y el tercero con un arreglo o ajuste. Se actualiza en cada publicación y se anota en changelog.txt. -->
-    <p class="version">Versión 2.5.3</p>
+    <p class="version">Versión 2.5.4</p>
   </div>
 </footer>
 
@@ -3073,6 +3074,11 @@ body.estado-en-menu .estadobar { display: none; }
     <h2 id="progTitulo">Programar solicitud</h2>
     <p class="progresumen" id="progResumen"></p>
     <div class="formgrid">
+      <div class="f wide soloprog">
+        <label for="pTituloSol">Título</label>
+        <input id="pTituloSol" maxlength="120" autocomplete="off" placeholder="Ej.: Reparar fuga del lavaplatos">
+        <span class="hint">Nombre corto con el que se verá la solicitud. Si lo dejas vacío, se usa la descripción.</span>
+      </div>
       <div class="f soloprog">
         <label for="pCategoria">Categoría</label>
         <select id="pCategoria"></select>
@@ -3486,6 +3492,7 @@ body.estado-en-menu .estadobar { display: none; }
       prioridad: document.getElementById("pPrioridad"),
       fecha: document.getElementById("pFecha"),
       responsable: document.getElementById("pResponsable"),
+      titulo: document.getElementById("pTituloSol"),
       costo: document.getElementById("pCosto"),
       respuesta: document.getElementById("pRespuesta"),
       respuestaLabel: document.getElementById("pRespuestaLabel"),
@@ -7320,6 +7327,11 @@ body.estado-en-menu .estadobar { display: none; }
     return b;
   }
 
+  /* Título de la solicitud: el que puso el coordinador al programarla o, si no tiene, la descripción del punto. */
+  function tituloSol(s) {
+    return (s && (s.titulo || s.descripcion)) || "Sin descripción";
+  }
+
   /* Nombre y cargo de quien reportó; las solicitudes viejas solo tienen el nombre. */
   function quienReporta(s) {
     return [s.reportado_por, s.cargo_reporta].filter(Boolean).join(" · ");
@@ -7331,8 +7343,15 @@ body.estado-en-menu .estadobar { display: none; }
 
     var p = document.createElement("p");
     p.className = "card-desc";
-    p.textContent = s.descripcion || "Sin descripción";
+    p.textContent = tituloSol(s);
     card.appendChild(p);
+    /* Con título propio, lo que escribió el punto queda debajo, tal cual. */
+    if (s.titulo && s.descripcion) {
+      var orig = document.createElement("p");
+      orig.className = "soldesc";
+      orig.textContent = s.descripcion;
+      card.appendChild(orig);
+    }
 
     var bs = document.createElement("div");
     bs.className = "badges";
@@ -7464,7 +7483,7 @@ body.estado-en-menu .estadobar { display: none; }
   function eliminarSolicitud(s) {
     confirmar({
       titulo: "¿Eliminar esta solicitud de " + nombrePunto(s.punto) + "?",
-      cita: String(s.descripcion || "Sin descripción").slice(0, 140),
+      cita: tituloSol(s).slice(0, 140),
       textos: ["También se borran sus fotos. No se puede deshacer.",
         s.mantenimiento_id ? "El trabajo que se programó desde ella no se borra." : ""],
       boton: "Eliminar solicitud",
@@ -8025,6 +8044,7 @@ body.estado-en-menu .estadobar { display: none; }
     Array.prototype.forEach.call(el.progForm.querySelectorAll(".soloprog"), function (n) { n.hidden = !programar; });
     Array.prototype.forEach.call(el.progForm.querySelectorAll(".solocierre"), function (n) { n.hidden = modo !== "noprocede"; });
     p.categoria.value = s.categoria || "";
+    p.titulo.value = s.titulo || "";
     p.prioridad.value = s.prioridad || s.urgencia || "Media";
     llenarActivos(p.activo, s.punto, programar ? (det.activo_id || "") : "");
     p.fecha.value = programar ? (s.fecha_programada || "") : "";
@@ -8040,7 +8060,7 @@ body.estado-en-menu .estadobar { display: none; }
     el.progError.hidden = true;
     el.progOverlay.hidden = false;
     setTimeout(function () {
-      (programar ? (p.categoria.value ? p.fecha : p.categoria) : (modo === "noprocede" ? p.motivo : p.respuesta)).focus();
+      (programar ? p.titulo : (modo === "noprocede" ? p.motivo : p.respuesta)).focus();
     }, 30);
   }
 
@@ -8125,6 +8145,7 @@ body.estado-en-menu .estadobar { display: none; }
       if (!res.data || !res.data.length) throw { codigo: "permiso" };
       return sb.from("solicitudes").update({
         estado: "Programada",
+        titulo: p.titulo.value.trim() || null,
         categoria: p.categoria.value,
         prioridad: p.prioridad.value,
         fecha_programada: p.fecha.value,
@@ -9151,7 +9172,7 @@ body.estado-en-menu .estadobar { display: none; }
     }).map(function (s) {
       var det = state.solDetalle[s.id] || {};
       return { tipo: "solicitud", obj: s, id: s.id, fecha: s.fecha_programada || String(s.actualizado || s.creado || "").slice(0, 10),
-        punto: s.punto, desc: s.descripcion, quien: det.responsable, monto: null, est: numero(det.costo_estimado) };
+        punto: s.punto, desc: tituloSol(s), quien: det.responsable, monto: null, est: numero(det.costo_estimado) };
     });
     return trabajos.concat(sols).sort(function (a, b) { return String(b.fecha).localeCompare(String(a.fecha)); });
   }
@@ -9605,7 +9626,7 @@ body.estado-en-menu .estadobar { display: none; }
       opciones.push({
         value: "sol:" + s.id,
         label: "Solicitud · " + fecha(s.fecha_programada || String(s.creado || "").slice(0, 10)) + " · " + nombrePunto(s.punto) + " · " +
-          String(s.descripcion || "").slice(0, 50) + " · " + (est !== null ? cop(est) : "sin costo") +
+          tituloSol(s).slice(0, 50) + " · " + (est !== null ? cop(est) : "sin costo") +
           (pagados["sol:" + s.id] && "sol:" + s.id !== valor ? " (ya tiene pago)" : "")
       });
     });
@@ -9622,7 +9643,7 @@ body.estado-en-menu .estadobar { display: none; }
       var det = state.solDetalle[s.id] || {};
       if (det.responsable) el.m.tercero.value = det.responsable;
       if (numero(det.costo_estimado) !== null) el.m.valor.value = numero(det.costo_estimado);
-      el.m.concepto.value = ("Pago: " + (s.descripcion || "")).slice(0, 500);
+      el.m.concepto.value = ("Pago: " + tituloSol(s)).slice(0, 500);
       el.m.punto.value = s.punto || "";
       el.m.categoria.value = s.categoria || "";
       return;
@@ -10115,7 +10136,7 @@ body.estado-en-menu .estadobar { display: none; }
       var det = state.solDetalle[s.id];
       var detalle = "Solicitud · " + nombrePunto(s.punto) + (s.categoria ? " · " + categoriaCorta(s.categoria) : "") +
         (det && det.responsable ? " · " + det.responsable : "");
-      return filaHoy(s.descripcion || "Sin descripción", detalle, cuando, vencido ? "vencido" : "sol",
+      return filaHoy(tituloSol(s), detalle, cuando, vencido ? "vencido" : "sol",
         function () { irASeccion("solicitudes"); });
     }
 
@@ -10133,7 +10154,7 @@ body.estado-en-menu .estadobar { display: none; }
       "No hay trabajos ni solicitudes programados para esta semana."));
     wrap.appendChild(bloqueHoy("hoySolicitudes", "Solicitudes nuevas",
       nuevas.map(function (s) {
-        return filaHoy(s.descripcion, nombrePunto(s.punto) + " · urgencia " + String(s.urgencia || "Media").toLowerCase(),
+        return filaHoy(tituloSol(s), nombrePunto(s.punto) + " · urgencia " + String(s.urgencia || "Media").toLowerCase(),
           "Recibida " + fechaHora(s.creado), "sol", function () { irASeccion("solicitudes"); });
       }), "No hay solicitudes nuevas de los puntos."));
 
@@ -10142,7 +10163,7 @@ body.estado-en-menu .estadobar { display: none; }
     if (porAsignar.length) {
       wrap.appendChild(bloqueHoy("hoyPorAsignar", "Aprobadas, por programar",
         porAsignar.map(function (s) {
-          return filaHoy(s.descripcion, nombrePunto(s.punto) + " · urgencia " + String(s.urgencia || "Media").toLowerCase(),
+          return filaHoy(tituloSol(s), nombrePunto(s.punto) + " · urgencia " + String(s.urgencia || "Media").toLowerCase(),
             "Recibida " + fechaHora(s.creado), "sol", function () { irASeccion("solicitudes"); });
         }), ""));
     }
