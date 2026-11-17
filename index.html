@@ -1417,6 +1417,11 @@ button.lineatitulo[aria-expanded="true"]::after { transform: rotate(90deg); }
   margin-bottom: 12px;
 }
 .solavisos-nota { flex-basis: 100%; color: var(--fg); font-weight: 500; }
+/* Avisos bloqueados: una línea; los pasos se despliegan al tocarla. */
+.solavisos-bloq { padding-block: 7px; border-left-color: var(--line-strong); }
+.solavisos-bloq details { width: 100%; }
+.solavisos-bloq summary { cursor: pointer; font-weight: 500; color: var(--fg); }
+.solavisos-bloq p { margin: 6px 0 0; }
 .solresp { font-size: .85rem; margin: 0; padding: 8px 10px; background: var(--surface-2); border-radius: var(--radius); overflow-wrap: break-word; }
 .progresumen { font-size: .86rem; color: var(--fg-muted); margin: -4px 0 12px; overflow-wrap: break-word; }
 .f label.checkline { display: flex; align-items: center; gap: 8px; font-size: .9rem; text-transform: none; letter-spacing: 0; color: var(--fg); font-weight: 500; }
@@ -2525,6 +2530,7 @@ body.estado-en-menu .estadobar { display: none; }
           </div>
         </div>
         <div class="menusep"></div>
+        <button type="button" id="btnAvisos" role="menuitem" hidden>Activar avisos en este dispositivo</button>
         <button type="button" id="btnClaves" role="menuitem" hidden>Cambiar mi contraseña</button>
         <button type="button" id="btnSalir" role="menuitem">Salir</button>
       </div>
@@ -2613,7 +2619,7 @@ body.estado-en-menu .estadobar { display: none; }
     <p class="credito">Diseñado por: Daniel Morales V</p>
     <!-- Versión: el primer número sube con un cambio grande, el segundo con una función nueva
          y el tercero con un arreglo o ajuste. Se actualiza en cada publicación y se anota en changelog.txt. -->
-    <p class="version">Versión 2.5.1</p>
+    <p class="version">Versión 2.5.2</p>
   </div>
 </footer>
 
@@ -5782,7 +5788,11 @@ body.estado-en-menu .estadobar { display: none; }
       p.textContent = t;
       caja.appendChild(p);
     });
-    document.getElementById("confOk").textContent = o.boton || "Eliminar";
+    var ok = document.getElementById("confOk");
+    ok.textContent = o.boton || "Eliminar";
+    /* Por defecto es un borrado (rojo); una invitación usa el botón principal. */
+    ok.className = o.primario ? "primary" : "danger";
+    document.getElementById("confCancelar").textContent = o.cancelar || "Cancelar";
     confOverlay.hidden = false;
     setTimeout(function () { document.getElementById("confCancelar").focus(); }, 30);
   }
@@ -6416,6 +6426,7 @@ body.estado-en-menu .estadobar { display: none; }
 
   function marcarRol() {
     pintarAvatar();
+    marcarAvisosMenu();
     if (!state.perfil) {
       el.rolepill.hidden = true;
       el.btnClaves.hidden = true;
@@ -7524,46 +7535,69 @@ body.estado-en-menu .estadobar { display: none; }
     "› Permisos › Notificaciones › Permitir. Revisa también en los ajustes del teléfono " +
     "› Aplicaciones › Chrome › Notificaciones que estén activadas.";
 
-  function bloqueAvisos() {
-    /* Los avisos son para quien atiende (coordinador) y para el punto que reporta. */
-    if (!("Notification" in window) || state.perfil === "consulta") return null;
-    var box = document.createElement("div");
-    box.className = "solavisos";
-    var quePasa = state.perfil === "punto"
+  /* Los avisos son para quien atiende (coordinador) y para el punto que reporta. */
+  function avisosAplican() {
+    return "Notification" in window && (state.perfil === "coordinador" || state.perfil === "punto");
+  }
+
+  function quePasaAvisos() {
+    return state.perfil === "punto"
       ? "cuando el coordinador programe o responda tus solicitudes"
       : "cada vez que un punto envíe una solicitud";
-    if (Notification.permission === "granted") {
-      box.textContent = "Avisos activados en este dispositivo: te llega una notificación " + quePasa +
-        (pushDisponible() ? ", aunque la app esté cerrada." : ", mientras la app esté abierta.");
-      if (notaAvisos) box.textContent += " " + notaAvisos;
+  }
+
+  /* Pide el permiso y registra el dispositivo. Deja en notaAvisos lo que haya que explicar. */
+  function activarAvisos() {
+    var pedir;
+    try { pedir = Notification.requestPermission(); } catch (e) { pedir = null; }
+    return Promise.resolve(pedir).then(function (permiso) {
+      permiso = permiso || Notification.permission;
+      if (permiso === "granted") {
+        avisarSistema("Avisos activados", "Así te llegarán los avisos de las solicitudes.", "brc-prueba");
+        return suscribirPush().then(function (ok) {
+          notaAvisos = ok || !pushDisponible() ? "" :
+            "Los avisos se activaron, pero no se pudo registrar este dispositivo en el servidor; revisa la conexión y vuelve a abrir la app.";
+          if (!notaAvisos) toast("Avisos activados en este dispositivo.");
+        });
+      }
+      /* Si el teléfono no mostró la pregunta, el permiso sigue sin decidir. */
+      notaAvisos = permiso === "denied" ? "" : "El teléfono no mostró la pregunta de permiso. " + COMO_PERMITIR;
+    }).catch(function () {
+      notaAvisos = "No se pudo pedir el permiso. " + COMO_PERMITIR;
+    }).then(function () { marcarAvisosMenu(); render(); });
+  }
+
+  /* Con los avisos ya activos no se muestra nada: el recuadro solo aparece si falta algo. */
+  function bloqueAvisos() {
+    if (!avisosAplican()) return null;
+    var permiso = Notification.permission;
+    if (permiso === "granted" && !notaAvisos) return null;
+    var box = document.createElement("div");
+    box.className = "solavisos";
+    if (permiso === "granted") {
+      box.textContent = notaAvisos;
       return box;
     }
-    if (Notification.permission === "denied") {
-      box.textContent = "Los avisos están bloqueados en este dispositivo. " + COMO_PERMITIR;
+    if (permiso === "denied") {
+      /* Bloqueados: una línea corta; los pasos para permitirlos se despliegan al tocar. */
+      box.classList.add("solavisos-bloq");
+      var det = document.createElement("details");
+      var sum = document.createElement("summary");
+      sum.textContent = "Avisos bloqueados en este dispositivo · Cómo activarlos";
+      det.appendChild(sum);
+      var p = document.createElement("p");
+      p.textContent = COMO_PERMITIR;
+      det.appendChild(p);
+      box.appendChild(det);
       return box;
     }
     var t = document.createElement("span");
-    t.textContent = "Recibe una notificación " + quePasa + ".";
+    t.textContent = "Recibe una notificación " + quePasaAvisos() + ".";
     box.appendChild(t);
-    var boton = botonChico("Activar avisos en este dispositivo", "primary", function () {
+    var boton = botonChico("Activar avisos", "primary", function () {
       boton.disabled = true;
       boton.textContent = "Pidiendo permiso…";
-      var pedir;
-      try { pedir = Notification.requestPermission(); } catch (e) { pedir = null; }
-      Promise.resolve(pedir).then(function (permiso) {
-        permiso = permiso || Notification.permission;
-        if (permiso === "granted") {
-          avisarSistema("Avisos activados", "Así te llegarán los avisos de las solicitudes.", "brc-prueba");
-          return suscribirPush().then(function (ok) {
-            notaAvisos = ok || !pushDisponible() ? "" :
-              "Pero no se pudo registrar este dispositivo en el servidor; revisa la conexión y vuelve a abrir la app.";
-          });
-        }
-        /* Si el teléfono no mostró la pregunta, el permiso sigue sin decidir. */
-        notaAvisos = permiso === "denied" ? "" : "El teléfono no mostró la pregunta de permiso. " + COMO_PERMITIR;
-      }).catch(function () {
-        notaAvisos = "No se pudo pedir el permiso. " + COMO_PERMITIR;
-      }).then(render);
+      activarAvisos();
     });
     box.appendChild(boton);
     if (notaAvisos) {
@@ -7574,6 +7608,45 @@ body.estado-en-menu .estadobar { display: none; }
     }
     return box;
   }
+
+  /* Justo después de enviar una solicitud es cuando más sentido tiene pedir el permiso. Se pregunta una vez por dispositivo. */
+  function invitarAvisos() {
+    if (!avisosAplican() || state.perfil !== "punto" || Notification.permission !== "default") return;
+    if (lee("brc.avisosInvitado") === "1") return;
+    guarda("brc.avisosInvitado", "1");
+    confirmar({
+      titulo: "¿Te avisamos cuando la programen?",
+      textos: ["Te llega una notificación a este teléfono " + quePasaAvisos() + ", aunque la app esté cerrada.",
+        "Después el teléfono te pedirá permiso: toca «Permitir»."],
+      boton: "Activar avisos",
+      cancelar: "Ahora no",
+      primario: true,
+      accion: activarAvisos
+    });
+  }
+
+  /* En el menú de perfil, la opción de activar los avisos queda a mano mientras no estén activos. */
+  function marcarAvisosMenu() {
+    var b = document.getElementById("btnAvisos");
+    if (!b) return;
+    b.hidden = !avisosAplican() || Notification.permission === "granted";
+    b.textContent = avisosAplican() && Notification.permission === "denied"
+      ? "Avisos bloqueados: cómo activarlos" : "Activar avisos en este dispositivo";
+  }
+  document.getElementById("btnAvisos").addEventListener("click", function () {
+    if (Notification.permission === "denied") {
+      confirmar({
+        titulo: "Avisos bloqueados en este dispositivo",
+        textos: [COMO_PERMITIR],
+        boton: "Entendido",
+        cancelar: "Cerrar",
+        primario: true,
+        accion: function () {}
+      });
+      return;
+    }
+    activarAvisos();
+  });
 
   /* En los teléfonos la notificación solo se puede mostrar a través del trabajador del navegador. */
   function avisarSistema(titulo, cuerpo, etiqueta) {
@@ -7915,6 +7988,7 @@ body.estado-en-menu .estadobar { display: none; }
       restaurarSolicitud();
       cerrarSolicitud();
       toast(state.perfil === "punto" ? "Solicitud enviada. El coordinador ya la puede ver." : "Solicitud registrada.");
+      invitarAvisos();
       return cargarSolicitudes();
     }).catch(function (e) {
       restaurarSolicitud();
