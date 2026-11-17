@@ -13,6 +13,11 @@ La más reciente va primero. Fechas en hora de Colombia.
 VERSIÓN 2.5 · CAMBIOS DESDE LA REVISIÓN DE LA APP
 -------------------------------------------------
 
+2.5.2 · 2026-11-16 · Avisos más fáciles de activar
+  - Al enviar una solicitud, el punto ve la invitación "¿Te avisamos cuando la programen?" para activar los avisos en ese teléfono. Se pregunta una sola vez por dispositivo.
+  - Coordinador y puntos tienen "Activar avisos en este dispositivo" en el menú de perfil mientras no estén activos.
+  - Con los avisos activos ya no aparece el recuadro en Solicitudes; si están bloqueados, se ve una sola línea y los pasos para permitirlos se despliegan al tocarla.
+
 2.5.1 · 2026-11-16 · Más espacio en el celular
   - El coordinador cambia su estado y ubicación desde el menú de perfil; un punto de color en el botón muestra su estado. Gerencia y puntos lo siguen viendo arriba, solo para consulta.
   - Las tarjetas de solicitudes muestran solo el paso siguiente; Editar, Poner en espera, No procede y Eliminar pasan al menú "⋯".
