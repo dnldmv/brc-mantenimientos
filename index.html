@@ -2620,7 +2620,7 @@ body.estado-en-menu .estadobar { display: none; }
     <p class="credito">Desarrollado por: Daniel Morales V</p>
     <!-- Versión: el primer número sube con un cambio grande, el segundo con una función nueva
          y el tercero con un arreglo o ajuste. Se actualiza en cada publicación y se anota en changelog.txt. -->
-    <p class="version">Versión 2.5.4</p>
+    <p class="version">Versión 2.5.5</p>
   </div>
 </footer>
 
@@ -3027,6 +3027,11 @@ body.estado-en-menu .estadobar { display: none; }
   <form class="sheet" id="solForm" novalidate>
     <h2 id="solTitulo">Nueva solicitud</h2>
     <div class="formgrid">
+      <div class="f wide" id="sTituloWrap" hidden>
+        <label for="sTitulo">Título</label>
+        <input id="sTitulo" maxlength="120" autocomplete="off" placeholder="Ej.: Reparar fuga del lavaplatos">
+        <span class="hint">Nombre corto con el que se verá la solicitud. Si lo dejas vacío, se usa la descripción.</span>
+      </div>
       <div class="f" id="solPuntoWrap">
         <label for="sPunto">Punto de venta</label>
         <select id="sPunto"></select>
@@ -3483,6 +3488,7 @@ body.estado-en-menu .estadobar { display: none; }
       categoria: document.getElementById("sCategoria"),
       urgencia: document.getElementById("sUrgencia"),
       descripcion: document.getElementById("sDescripcion"),
+      titulo: document.getElementById("sTitulo"),
       afecta: document.getElementById("sAfecta"),
       fotos: document.getElementById("sFotos"),
       fotosPrev: document.getElementById("sFotosPrev")
@@ -7799,6 +7805,9 @@ body.estado-en-menu .estadobar { display: none; }
     document.getElementById("solTitulo").textContent = editar ? "Editar solicitud" : "Nueva solicitud";
     restaurarSolicitud();
     el.s.fotos.value = "";
+    /* El título lo pone el coordinador; el punto solo describe el problema. */
+    document.getElementById("sTituloWrap").hidden = state.perfil !== "coordinador";
+    el.s.titulo.value = editar ? (sol.titulo || "") : "";
     if (editar) {
       el.solPuntoWrap.hidden = false;
       el.s.punto.value = sol.punto || "";
@@ -7930,6 +7939,7 @@ body.estado-en-menu .estadobar { display: none; }
       el.solEnviar.textContent = "Guardando…";
       return sb.from("solicitudes").update({
         punto: punto,
+        titulo: s.titulo.value.trim() || null,
         reportado_por: s.reporta.value.trim(),
         cargo_reporta: s.cargo.value.trim(),
         categoria: s.categoria.value || null,
@@ -7998,6 +8008,7 @@ body.estado-en-menu .estadobar { display: none; }
         cargo_reporta: s.cargo.value.trim(),
         categoria: s.categoria.value || null,
         descripcion: s.descripcion.value.trim(),
+        titulo: state.perfil === "coordinador" ? (s.titulo.value.trim() || null) : null,
         urgencia: s.urgencia.value,
         afecta_operacion: s.afecta.checked,
         fotos: fotos
