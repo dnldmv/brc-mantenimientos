@@ -2591,7 +2591,7 @@ select { pointer-events: none; }
     <p class="credito">Diseñado por: Daniel Morales V</p>
     <!-- Versión: el primer número sube con un cambio grande, el segundo con una función nueva
          y el tercero con un arreglo o ajuste. Se actualiza en cada publicación. -->
-    <p class="version">Versión 2.4.2</p>
+    <p class="version">Versión 2.5.0</p>
   </div>
 </footer>
 
@@ -2750,17 +2750,36 @@ select { pointer-events: none; }
 
 <div class="overlay" id="compOverlay" hidden>
   <div class="sheet">
-    <h2>Comprobante de pago</h2>
-    <p class="finnota">Para marcar como pagado este trabajo, adjunta el comprobante:</p>
+    <h2>Registrar pago</h2>
+    <p class="finnota" id="compIntro">Para marcar como pagado este trabajo, adjunta el comprobante:</p>
     <p class="pendaviso" id="compTrabajo"></p>
-    <div class="f wide">
-      <input type="file" id="compArchivo" accept="application/pdf,image/png,image/jpeg,image/webp" aria-label="Comprobante de pago">
-      <span class="hint">PDF, JPG, PNG o WebP, hasta 20 MB.</span>
+    <div class="formgrid">
+      <div class="f wide" id="compArchivoWrap">
+        <label for="compArchivo">Comprobante de pago</label>
+        <input type="file" id="compArchivo" accept="application/pdf,image/png,image/jpeg,image/webp" aria-label="Comprobante de pago">
+        <span class="hint">PDF, JPG, PNG o WebP, hasta 20 MB.</span>
+      </div>
+      <div class="f compegreso">
+        <label for="compValor">Valor pagado (COP)</label>
+        <input id="compValor" type="number" min="1" step="1000" inputmode="numeric" placeholder="0">
+      </div>
+      <div class="f compegreso">
+        <label for="compFecha">Fecha del pago</label>
+        <input id="compFecha" type="date">
+      </div>
+      <div class="f compegreso">
+        <label for="compTercero">Pagado a</label>
+        <input id="compTercero" maxlength="160" autocomplete="off" placeholder="Contratista o proveedor">
+      </div>
+      <div class="f compegreso">
+        <label for="compMedio">Medio de pago</label>
+        <select id="compMedio" aria-label="Medio de pago"></select>
+      </div>
     </div>
     <div class="formerror" id="compError" hidden></div>
     <div class="sheet-actions">
       <button type="button" id="compCancelar">Cancelar</button>
-      <button type="button" class="primary" id="compGuardar">Guardar como pagado</button>
+      <button type="button" class="primary" id="compGuardar">Guardar pago</button>
     </div>
   </div>
 </div>
@@ -4692,9 +4711,9 @@ select { pointer-events: none; }
         ayuda: "Costo estimado de los mantenimientos que estás viendo" },
       { k: "Ejecutado", v: cop(real), cls: "", money: true, ico: "ejecutado",
         ayuda: "Costo real ya ejecutado de los mantenimientos que estás viendo" },
-      { k: "Por pagar", v: cop(porPagar), cls: "is-pend", money: true, ico: "porpagar",
+      { k: "Cuenta remitida", v: cop(porPagar), cls: "is-pend", money: true, ico: "porpagar",
         pago: "Remitido", cuenta: cuentasPorPagar },
-      { k: "Sin cobro", v: cop(sinCobro), cls: "is-curs", money: true, ico: "sincobro",
+      { k: "Sin cuenta de cobro", v: cop(sinCobro), cls: "is-curs", money: true, ico: "sincobro",
         pago: "Pendiente", cuenta: cuentasSinCobro }
     ];
     el.metrics.textContent = "";
@@ -5647,8 +5666,9 @@ select { pointer-events: none; }
     return state.pagos.size === 1 && state.pagos.has(estado);
   }
 
-  /* "Por pagar" = cuentas ya remitidas a contabilidad, esperando el pago.
-     "Pago sin cobro" = el proveedor todavía no ha pasado la cuenta. */
+  /* "Cuenta remitida" = cuentas ya remitidas a contabilidad, esperando el pago.
+     "Sin cuenta de cobro" = el proveedor todavía no ha pasado la cuenta.
+     El "Por pagar" de Hoy y Finanzas es otra cosa: lo completado sin egreso registrado. */
   function filtrarPorPago(estado) {
     var yaEsta = filtroPagoActivo(estado);
     state.pagos.clear();
@@ -5964,7 +5984,12 @@ select { pointer-events: none; }
       restaurarGuardar();
       cerrarForm();
       toast(id ? "Mantenimiento actualizado." : "Mantenimiento registrado.");
-      return cargarDatos();
+      return cargarDatos().then(function () {
+        /* Quedó pagado sin egreso en Finanzas: se piden los datos del pago para registrarlo. */
+        if (!id || datos.estadoPago !== "Pagado" || egresoDe(id)) return;
+        var r = state.registros.filter(function (x) { return x.id === id; })[0];
+        if (r) abrirComprobante(r);
+      });
     }).catch(function (e) {
       restaurarGuardar();
       if (e && e.codigo === "grande") {
@@ -6019,15 +6044,51 @@ select { pointer-events: none; }
   var compError = document.getElementById("compError");
   var compGuardar = document.getElementById("compGuardar");
 
+  /* El egreso de Finanzas que paga un trabajo, si ya existe. */
+  function egresoDe(id) {
+    for (var i = 0; i < state.movimientos.length; i++) {
+      var m = state.movimientos[i];
+      if (m.tipo === "Egreso" && m.mantenimiento_id === id) return m;
+    }
+    return null;
+  }
+
+  /* Un soporte que también es el comprobante de un trabajo no se borra con el egreso. */
+  function soporteEnUso(sop) {
+    if (!sop || !sop.archivo) return false;
+    return state.registros.some(function (r) {
+      return r.soportes && r.soportes.comprobantePago && r.soportes.comprobantePago.archivo === sop.archivo;
+    });
+  }
+
+  fillSelect(document.getElementById("compMedio"), ["Transferencia", "Efectivo", "Cheque", "Otro"].map(function (m) {
+    return { value: m, label: m };
+  }));
+
+  /* Un trabajo pagado tiene comprobante y egreso en Finanzas: esta ventana pide lo que falte
+     y deja las dos cosas registradas en un solo paso. */
   function abrirComprobante(r, listo) {
-    compActual = { r: r, listo: listo };
+    var conComp = tieneComprobante(r);
+    var egreso = egresoDe(r.id);
+    compActual = { r: r, listo: listo, conComp: conComp, egreso: egreso };
     document.getElementById("compTrabajo").textContent = (r.descripcion || "Sin descripción") + " (" +
       nombrePunto(r.punto) + (r.responsable ? " · " + r.responsable : "") + ")";
+    document.getElementById("compIntro").textContent = conComp
+      ? "Ya tiene comprobante. Completa los datos del pago para que quede registrado en Finanzas:"
+      : (egreso ? "Ya está registrado en Finanzas. Adjunta el comprobante para marcarlo como pagado:"
+        : "Adjunta el comprobante y los datos del pago. Queda marcado como pagado y registrado en Finanzas:");
+    document.getElementById("compArchivoWrap").hidden = conComp;
+    Array.prototype.forEach.call(compOverlay.querySelectorAll(".compegreso"), function (n) { n.hidden = !!egreso; });
+    var monto = numero(r.costoReal) !== null ? numero(r.costoReal) : numero(r.costoEstimado);
+    document.getElementById("compValor").value = monto !== null ? monto : "";
+    document.getElementById("compFecha").value = hoyIso();
+    document.getElementById("compTercero").value = r.responsable || "";
+    document.getElementById("compMedio").value = "Transferencia";
     compArchivo.value = "";
     pintarArchivo(compArchivo);
     compError.hidden = true;
     compGuardar.disabled = false;
-    compGuardar.textContent = "Guardar como pagado";
+    compGuardar.textContent = "Guardar pago";
     compOverlay.hidden = false;
   }
 
@@ -6040,7 +6101,7 @@ select { pointer-events: none; }
     compError.textContent = texto;
     compError.hidden = false;
     compGuardar.disabled = false;
-    compGuardar.textContent = "Guardar como pagado";
+    compGuardar.textContent = "Guardar pago";
   }
 
   document.getElementById("compCancelar").addEventListener("click", cerrarComprobante);
@@ -6049,38 +6110,85 @@ select { pointer-events: none; }
   });
   compGuardar.addEventListener("click", function () {
     var actual = compActual;
-    var archivo = compArchivo.files && compArchivo.files[0];
     if (!actual) return;
-    if (!archivo) return errorComprobante("Adjunta el comprobante para poder guardar.");
-    if (archivo.size > 20 * 1024 * 1024) return errorComprobante("El archivo pasa de 20 MB. Elige uno más liviano.");
+    var r = actual.r;
+    var archivo = compArchivo.files && compArchivo.files[0];
+    var valor = Number(document.getElementById("compValor").value);
+    var fechaPago = document.getElementById("compFecha").value;
+    var tercero = document.getElementById("compTercero").value.trim();
+    if (!actual.conComp && !archivo) return errorComprobante("Adjunta el comprobante para poder guardar.");
+    if (archivo && archivo.size > 20 * 1024 * 1024) return errorComprobante("El archivo pasa de 20 MB. Elige uno más liviano.");
+    if (!actual.egreso) {
+      var faltan = [];
+      if (!(valor > 0)) faltan.push("el valor pagado");
+      if (!fechaPago) faltan.push("la fecha del pago");
+      if (!tercero) faltan.push("a quién se le pagó");
+      if (faltan.length) return errorComprobante("Falta " + faltan.join(", ") + ".");
+    }
     if (!sb) return sinBase();
 
-    var r = actual.r;
-    var tipo = archivo.type || tipoPorNombre(archivo.name) || "application/pdf";
-    var ruta = "comprobantePago/" + Date.now() + "-" + rutaSegura(archivo.name);
     var soportes = Object.assign({}, r.soportes);
-    soportes.comprobantePago = { archivo: ruta, nombre: archivo.name, tipo: tipo };
+    var ruta = null;
+    var nuevoComp = null;
+    if (archivo) {
+      var tipo = archivo.type || tipoPorNombre(archivo.name) || "application/pdf";
+      ruta = "comprobantePago/" + Date.now() + "-" + rutaSegura(archivo.name);
+      nuevoComp = { archivo: ruta, nombre: archivo.name, tipo: tipo };
+      soportes.comprobantePago = nuevoComp;
+    }
+    var comp = soportes.comprobantePago;
+    var cambios = { estado_pago: "Pagado" };
+    if (nuevoComp) cambios.soportes = soportes;
+    if (!actual.egreso && numero(r.costoReal) === null) cambios.costo_real = valor;
+    var movId = null;
     compError.hidden = true;
     compGuardar.disabled = true;
     compGuardar.textContent = "Guardando…";
 
-    sb.storage.from("soportes").upload(ruta, archivo, { contentType: tipo, upsert: false }).then(function (res) {
-      if (res.error) throw res.error;
-      return sb.from("mantenimientos").update({ estado_pago: "Pagado", soportes: soportes }).eq("id", r.id).select("id");
+    var subida = archivo
+      ? sb.storage.from("soportes").upload(ruta, archivo, { contentType: nuevoComp.tipo, upsert: false })
+      : Promise.resolve({});
+    subida.then(function (res) {
+      if (res && res.error) throw res.error;
+      if (actual.egreso) return null;
+      /* El egreso usa el mismo comprobante como soporte. */
+      return sb.from("movimientos").insert({
+        tipo: "Egreso",
+        fecha: fechaPago,
+        valor: valor,
+        tercero: tercero,
+        concepto: ("Pago: " + (r.descripcion || "mantenimiento")).slice(0, 500),
+        punto: r.punto || null,
+        categoria: r.categoria || null,
+        medio: document.getElementById("compMedio").value,
+        referencia: "",
+        mantenimiento_id: r.id,
+        soporte: comp ? Object.assign({ bucket: "soportes" }, comp) : null,
+        notas: ""
+      }).select("id").single().then(function (res) {
+        if (res.error) throw res.error;
+        movId = res.data.id;
+      });
+    }).then(function () {
+      return sb.from("mantenimientos").update(cambios).eq("id", r.id).select("id");
     }).then(function (res) {
       if (res.error || !res.data || !res.data.length) {
-        /* Sin el cambio de estado, el archivo no debe quedar suelto. */
-        sb.storage.from("soportes").remove([ruta]);
+        /* Sin el cambio de estado no deben quedar sueltos ni el archivo ni el egreso. */
+        if (movId) sb.from("movimientos").delete().eq("id", movId).then(function () {});
+        if (ruta) sb.storage.from("soportes").remove([ruta]);
         throw res.error || new Error("sin permiso");
       }
       r.estadoPago = "Pagado";
       r.soportes = soportes;
+      if (cambios.costo_real !== undefined) r.costoReal = cambios.costo_real;
       if (actual.listo) actual.listo();
       cerrarComprobante();
       if (fichaActual && fichaActual.id === r.id) abrirFicha(r);
-      toast("Pago marcado como pagado, con su comprobante.");
-      return cargarDatos();
+      toast(actual.egreso ? "Pago marcado como pagado, con su comprobante."
+        : "Pago registrado: el trabajo quedó pagado y el egreso, en Finanzas.");
+      return Promise.all([cargarDatos(), cargarMovimientos()]);
     }).catch(function () {
+      if (ruta && !movId) sb.storage.from("soportes").remove([ruta]);
       errorComprobante("No se pudo guardar y el pago sigue como estaba. Revisa la conexión e intenta de nuevo.");
     });
   });
@@ -6111,7 +6219,7 @@ select { pointer-events: none; }
     });
     sel.addEventListener("change", function () {
       var nuevo = sel.value;
-      if (nuevo === "Pagado" && !tieneComprobante(r)) {
+      if (nuevo === "Pagado" && (!tieneComprobante(r) || !egresoDe(r.id))) {
         abrirComprobante(r, pintar);
         return;
       }
@@ -9478,16 +9586,42 @@ select { pointer-events: none; }
       ? subirSoporteFinanzas(archivo, fila.tipo, fila.fecha).then(function (s) { fila.soporte = s; })
       : Promise.resolve();
     var id = finEditando;
+    var aviso = id ? "Movimiento actualizado." : (fila.tipo === "Egreso" ? "Pago registrado." : "Ingreso registrado.");
     subida.then(function () {
       return id ? sb.from("movimientos").update(fila).eq("id", id) : sb.from("movimientos").insert(fila);
     }).then(function (res) {
       if (res && res.error) throw res.error;
-      if (fila.soporte && previo && previo.soporte && previo.soporte.archivo) {
+      if (fila.soporte && previo && previo.soporte && previo.soporte.archivo &&
+          (previo.soporte.bucket || "finanzas") === "finanzas" && !soporteEnUso(previo.soporte)) {
         sb.storage.from("finanzas").remove([previo.soporte.archivo]);
       }
+      /* Un egreso con soporte paga su trabajo: queda Pagado y el soporte le sirve de comprobante. */
+      var trabajo = fila.mantenimiento_id ? state.registros.filter(function (r) { return r.id === fila.mantenimiento_id; })[0] : null;
+      var sop = fila.soporte || (previo && previo.soporte) || null;
+      if (trabajo && sop && sop.archivo) {
+        var cambios = {};
+        if (trabajo.estadoPago !== "Pagado") cambios.estado_pago = "Pagado";
+        if (!tieneComprobante(trabajo)) {
+          var soportes = Object.assign({}, trabajo.soportes);
+          soportes.comprobantePago = Object.assign({}, sop, { bucket: sop.bucket || "finanzas" });
+          cambios.soportes = soportes;
+        }
+        if (numero(trabajo.costoReal) === null) cambios.costo_real = valor;
+        if (Object.keys(cambios).length) {
+          return sb.from("mantenimientos").update(cambios).eq("id", trabajo.id).select("id").then(function (r2) {
+            aviso = r2.error || !r2.data || !r2.data.length
+              ? "Pago registrado, pero el trabajo no se pudo marcar como pagado. Hazlo desde su ficha."
+              : "Pago registrado y el trabajo quedó pagado, con este soporte como comprobante.";
+            return cargarDatos();
+          });
+        }
+      } else if (trabajo && trabajo.estadoPago !== "Pagado") {
+        aviso = "Pago registrado. Adjunta el soporte para que el trabajo quede como pagado.";
+      }
+    }).then(function () {
       restaurarMovimiento();
       cerrarMovimiento();
-      toast(id ? "Movimiento actualizado." : (fila.tipo === "Egreso" ? "Pago registrado." : "Ingreso registrado."));
+      toast(aviso);
       return cargarMovimientos();
     }).catch(function (e) {
       restaurarMovimiento();
@@ -9510,7 +9644,10 @@ select { pointer-events: none; }
       accion: function () {
         sb.from("movimientos").delete().eq("id", m.id).then(function (res) {
           if (res.error) throw res.error;
-          if (m.soporte && m.soporte.archivo) sb.storage.from("finanzas").remove([m.soporte.archivo]);
+          /* El soporte se conserva si también es el comprobante de un trabajo. */
+          if (m.soporte && m.soporte.archivo && !soporteEnUso(m.soporte)) {
+            sb.storage.from(m.soporte.bucket || "finanzas").remove([m.soporte.archivo]);
+          }
           cerrarMovimiento();
           toast("Movimiento eliminado.");
           return cargarMovimientos();
@@ -9686,10 +9823,11 @@ select { pointer-events: none; }
     var solVencidas = solAgenda.filter(function (s) { return s.fecha_programada < hoy; });
     var solSemana = solAgenda.filter(function (s) { return s.fecha_programada >= hoy && s.fecha_programada <= hasta; });
     var nuevas = state.solicitudes.filter(function (s) { return s.estado === "Nueva" && enPuntoElegido(s); });
-    var porPagar = state.registros.filter(function (r) {
-      return r.estado === "Completado" && enPuntoElegido(r) && Number(r.costoReal) > 0 && r.estadoPago !== "Pagado";
-    });
-    var totalPagar = porPagar.reduce(function (t, r) { return t + Number(r.costoReal); }, 0);
+    /* Misma regla que Finanzas: completado o resuelto sin su egreso registrado. */
+    var porPagar = pagosPendientes();
+    var totalPagar = porPagar.reduce(function (t, p) {
+      return t + (p.monto !== null ? p.monto : (p.est !== null ? p.est : 0));
+    }, 0);
 
     /* Tarjeta de planes: cuántos planes activos tienen su trabajo al día.
        Debajo, en otro color, cómo van las solicitudes (las que no proceden no cuentan). */
@@ -9762,7 +9900,7 @@ select { pointer-events: none; }
     tiles.appendChild(tileHoy(String(semana.length + solSemana.length), "Próximos 7 días", "", function () { irABloque("hoySemana"); }));
     tiles.appendChild(tileHoy(String(nuevas.length), nuevas.length === 1 ? "Solicitud nueva" : "Solicitudes nuevas", "",
       function () { irASeccion("solicitudes"); }));
-    tiles.appendChild(tileHoy(copCorto(totalPagar), "Por pagar · " + porPagar.length + (porPagar.length === 1 ? " trabajo" : " trabajos"), "",
+    tiles.appendChild(tileHoy(copCorto(totalPagar), "Por pagar · " + porPagar.length + (porPagar.length === 1 ? " pendiente" : " pendientes"), "",
       function () { irASeccion("finanzas"); }));
     wrap.appendChild(tiles);
 
