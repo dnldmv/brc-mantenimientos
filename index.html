@@ -1422,6 +1422,18 @@ button.lineatitulo[aria-expanded="true"]::after { transform: rotate(90deg); }
 .solavisos-bloq details { width: 100%; }
 .solavisos-bloq summary { cursor: pointer; font-weight: 500; color: var(--fg); }
 .solavisos-bloq p { margin: 6px 0 0; }
+.solnotas { border-top: 1px dashed var(--line); padding-top: 8px; }
+.solnotasbtn { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; width: 100%; text-align: left; background: transparent; border: 0; padding: 2px 0; color: var(--fg); cursor: pointer; }
+.solnotasbtn:disabled { cursor: default; opacity: .7; }
+.solnotastit { font-size: .82rem; font-weight: 600; color: var(--accent); }
+.solnotastit::after { content: " ›"; }
+.solnotasbtn[aria-expanded="true"] .solnotastit::after { content: " ⌄"; }
+.solnotasbtn:disabled .solnotastit { color: var(--fg-muted); }
+.solnotasbtn:disabled .solnotastit::after { content: ""; }
+.solnotasult { font-size: .78rem; color: var(--fg-muted); overflow-wrap: anywhere; }
+.solnotascont { margin-top: 6px; }
+.solnotascont .ficha-sub { display: none; }
+.card .solnotas .linea { border-top: 0; padding-top: 0; }
 .soldesc { margin: -4px 0 0; font-size: .84rem; color: var(--fg-muted); overflow-wrap: break-word; white-space: pre-line; }
 .solresp { font-size: .85rem; margin: 0; padding: 8px 10px; background: var(--surface-2); border-radius: var(--radius); overflow-wrap: break-word; }
 .progresumen { font-size: .86rem; color: var(--fg-muted); margin: -4px 0 12px; overflow-wrap: break-word; }
@@ -2620,7 +2632,7 @@ body.estado-en-menu .estadobar { display: none; }
     <p class="credito">Desarrollado por: Daniel Morales V</p>
     <!-- Versión: el primer número sube con un cambio grande, el segundo con una función nueva
          y el tercero con un arreglo o ajuste. Se actualiza en cada publicación y se anota en changelog.txt. -->
-    <p class="version">Versión 2.5.5</p>
+    <p class="version">Versión 2.5.6</p>
   </div>
 </footer>
 
@@ -5487,9 +5499,14 @@ body.estado-en-menu .estadobar { display: none; }
   var SUGERENCIAS_SEGUIMIENTO = ["Solicitando permisos en el CC", "Permisos autorizados",
     "Contratista manifiesta imprevisto", "Contratista solicita material"];
 
-  function comentariosDe(id) {
-    return state.comentarios.filter(function (c) { return c.mantenimiento_id === id; });
+  /* Notas de un trabajo o, con campo "solicitud_id", de una solicitud. */
+  function comentariosDe(id, campo) {
+    campo = campo || "mantenimiento_id";
+    return state.comentarios.filter(function (c) { return c[campo] === id; });
   }
+
+  /* Lo que se está escribiendo en una nota no se pierde si la pantalla se vuelve a pintar. */
+  var borradoresNotas = {};
 
   function tituloNota(c) { return c.titulo || c.texto; }
 
@@ -5549,7 +5566,7 @@ body.estado-en-menu .estadobar { display: none; }
 
   function cargarComentarios() {
     if (!sb) return Promise.resolve();
-    return sb.from("comentarios").select("id, mantenimiento_id, titulo, texto, autor, autor_rol, creado")
+    return sb.from("comentarios").select("id, mantenimiento_id, solicitud_id, titulo, texto, autor, autor_rol, creado")
       .order("creado", { ascending: false }).then(function (res) {
         if (res.error) throw res.error;
         state.comentarios = res.data || [];
@@ -5559,7 +5576,8 @@ body.estado-en-menu .estadobar { display: none; }
       }).catch(function () { /* sin seguimiento: el resto del tablero sigue igual */ });
   }
 
-  function pintarSeguimiento(r, cont) {
+  function pintarSeguimiento(r, cont, campo) {
+    campo = campo || "mantenimiento_id";
     /* Si llega una nota nueva mientras se escribe otra, lo escrito no se pierde. */
     var previoTit = cont.querySelector(".seguform input");
     var previoDet = cont.querySelector(".seguform textarea");
@@ -5572,24 +5590,26 @@ body.estado-en-menu .estadobar { display: none; }
     cont.appendChild(t);
 
     if (!soloLectura()) {
-      var form = formSeguimiento(r);
-      form.querySelector("input").value = borradorTit;
-      form.querySelector("textarea").value = borradorDet;
+      var form = formSeguimiento(r, campo);
+      if (borradorTit) form.querySelector("input").value = borradorTit;
+      if (borradorDet) form.querySelector("textarea").value = borradorDet;
       cont.appendChild(form);
     }
 
-    var lista = comentariosDe(r.id);
+    var lista = comentariosDe(r.id, campo);
     if (!lista.length) {
       var v = document.createElement("p");
       v.className = "seguvacio";
-      v.textContent = "Todavía no hay notas en este trabajo.";
+      v.textContent = campo === "solicitud_id" ? "Todavía no hay notas en esta solicitud." : "Todavía no hay notas en este trabajo.";
       cont.appendChild(v);
       return;
     }
     cont.appendChild(lineaDeTiempo(lista, true));
   }
 
-  function formSeguimiento(r) {
+  function formSeguimiento(r, campo) {
+    campo = campo || "mantenimiento_id";
+    var clave = campo + ":" + r.id;
     var f = document.createElement("form");
     f.className = "seguform";
     var tit = document.createElement("input");
@@ -5604,6 +5624,10 @@ body.estado-en-menu .estadobar { display: none; }
     ta.placeholder = "Detalles (opcional)";
     ta.setAttribute("aria-label", "Detalles de la nota");
     f.appendChild(ta);
+    var borrador = borradoresNotas[clave] || {};
+    tit.value = borrador.tit || "";
+    ta.value = borrador.det || "";
+    f.addEventListener("input", function () { borradoresNotas[clave] = { tit: tit.value, det: ta.value }; });
 
     var sug = document.createElement("div");
     sug.className = "chips segusug";
@@ -5637,10 +5661,13 @@ body.estado-en-menu .estadobar { display: none; }
       if (!sb) return;
       enviar.disabled = true;
       enviar.textContent = "Guardando…";
-      sb.from("comentarios").insert({ mantenimiento_id: r.id, titulo: titulo, texto: ta.value.trim() }).then(function (res) {
+      var fila = { titulo: titulo, texto: ta.value.trim() };
+      fila[campo] = r.id;
+      sb.from("comentarios").insert(fila).then(function (res) {
         if (res.error) throw res.error;
         tit.value = "";
         ta.value = "";
+        delete borradoresNotas[clave];
         toast("Nota guardada.");
         return cargarComentarios();
       }).catch(function () {
@@ -5657,7 +5684,7 @@ body.estado-en-menu .estadobar { display: none; }
     confirmar({
       titulo: "¿Borrar esta nota?",
       cita: String(c.titulo || c.texto || "").slice(0, 140),
-      textos: ["Se quita de la línea de tiempo del trabajo. No se puede deshacer."],
+      textos: ["Se quita de la línea de tiempo. No se puede deshacer."],
       boton: "Borrar nota",
       accion: function () {
         sb.from("comentarios").delete().eq("id", c.id).then(function (res) {
@@ -7413,6 +7440,8 @@ body.estado-en-menu .estadobar { display: none; }
       card.appendChild(fb);
     }
 
+    if (state.perfil !== "punto") card.appendChild(notasSolicitud(s));
+
     /* A la vista solo el paso siguiente; lo demás va en el menú "⋯" para que la lista no se alargue. */
     var acts = document.createElement("div");
     acts.className = "card-actions";
@@ -7445,6 +7474,43 @@ body.estado-en-menu .estadobar { display: none; }
     if (menu.length) acts.appendChild(botonAcciones(menu, "Más acciones de la solicitud"));
     if (acts.children.length) card.appendChild(acts);
     return card;
+  }
+
+  /* Línea de tiempo de la solicitud, plegada: el botón dice cuántas notas hay y cuál es la última.
+     Solo coordinador y gerencia; el punto no ve las notas internas. */
+  var solNotasAbiertas = {};
+  function notasSolicitud(s) {
+    var box = document.createElement("div");
+    box.className = "solnotas";
+    var lista = comentariosDe(s.id, "solicitud_id");
+    var abierta = !!solNotasAbiertas[s.id];
+    var b = document.createElement("button");
+    b.type = "button";
+    b.className = "solnotasbtn";
+    b.setAttribute("aria-expanded", abierta ? "true" : "false");
+    var t = document.createElement("span");
+    t.className = "solnotastit";
+    t.textContent = lista.length ? "Línea de tiempo · " + lista.length + (lista.length === 1 ? " nota" : " notas")
+      : (soloLectura() ? "Sin notas" : "Agregar nota");
+    b.appendChild(t);
+    if (lista.length && !abierta) {
+      var u = document.createElement("span");
+      u.className = "solnotasult";
+      u.textContent = "Última: " + tituloNota(lista[0]) + " · " + fechaHora(lista[0].creado);
+      b.appendChild(u);
+    }
+    if (!lista.length && soloLectura()) b.disabled = true;
+    box.appendChild(b);
+    var cont = document.createElement("div");
+    cont.className = "solnotascont";
+    cont.hidden = !abierta;
+    if (abierta) pintarSeguimiento(s, cont, "solicitud_id");
+    box.appendChild(cont);
+    b.addEventListener("click", function () {
+      solNotasAbiertas[s.id] = !solNotasAbiertas[s.id];
+      box.parentNode.replaceChild(notasSolicitud(s), box);
+    });
+    return box;
   }
 
   /* Botón "⋯" que abre una lista de acciones con el mismo desplegable de la app.
